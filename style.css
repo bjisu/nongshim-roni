@@ -204,6 +204,7 @@ body {
 
 .landing-hero {
   position: relative;
+  isolation: isolate;          /* 공/로니 z-index를 히어로 안에서만 계산 */
   margin-bottom: 4px;
   animation: hero-float 3s ease-in-out infinite;
 }
@@ -212,15 +213,30 @@ body {
   50% { transform: translateY(-10px); }
 }
 .landing-roni {
+  position: relative;
+  z-index: 1;
   width: 158px;
   height: auto;
   filter: drop-shadow(0 14px 18px rgba(31, 63, 20, 0.3));
 }
+/* 공: ball.png의 흰 패널이 반투명하게 저장돼 있어 배경이 비쳐 보였다.
+   에셋 알파를 불투명하게 고친 뒤, 연두 배경에 묻히지 않도록
+   흰색 원형 스티커 테두리 + 진한 그림자로 분리한다. */
 .landing-ball {
   position: absolute;
+  z-index: 2;
   width: 62px;
+  height: 62px;             /* 원본 59×61 → 완전한 원형 스티커를 위해 정사각 */
   left: -42px;
   bottom: 10px;
+  opacity: 1;
+  mix-blend-mode: normal;
+  background: var(--white);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 5px var(--white),
+    0 0 0 7px rgba(78, 143, 47, 0.35),
+    0 10px 16px -6px rgba(31, 63, 20, 0.55);
   animation: ball-spin 4s linear infinite;
 }
 @keyframes ball-spin {
@@ -292,7 +308,29 @@ body {
    ═══════════════════════════════════════════ */
 #screen-game { background: linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 55%, var(--melon-200) 100%); }
 
-.sky { position: absolute; inset: 0 0 45% 0; pointer-events: none; }
+/* ── 경기장 배경 레이어 ────────────────────
+   전부 CSS / 인라인 SVG. 배경 요소는 채도·대비를 낮춰
+   공과 트랙이 계속 시선의 중심이 되도록 한다.
+   --horizon = 잔디가 시작하는 높이(화면 아래에서부터). */
+.field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  --horizon: 50%;    /* 골대 하단이 잔디에 닿는 높이 */
+  --stand-h: 150px;  /* 관중석 지붕이 골대 상단보다 위로 오도록 */
+}
+
+.sky {
+  position: absolute;
+  inset: 0 0 var(--horizon) 0;
+  background:
+    /* 지평선 쪽 옅은 아지랑이 — 관중석을 멀어 보이게 한다 */
+    linear-gradient(180deg, transparent 62%, rgba(255, 255, 255, 0.55) 100%),
+    /* 햇살 */
+    radial-gradient(circle at 84% 7%, rgba(255, 250, 224, 0.85), transparent 34%);
+}
 .cloud {
   position: absolute;
   width: 90px; height: 30px;
@@ -301,15 +339,105 @@ body {
   opacity: 0.92;
   box-shadow: 22px -12px 0 -4px var(--white), -20px -8px 0 -8px var(--white);
 }
-.cloud-1 { top: 12%; left: 8%; animation: cloud-drift 26s linear infinite; }
-.cloud-2 { top: 5%; right: 10%; transform: scale(0.7); animation: cloud-drift 34s linear infinite reverse; }
+.cloud-1 { top: 16%; left: 6%; animation: cloud-drift 26s linear infinite; }
+.cloud-2 { top: 5%; right: 8%; transform: scale(0.72); animation: cloud-drift 34s linear infinite reverse; }
+.cloud-3 { top: 34%; left: 44%; transform: scale(0.52); opacity: 0.7; animation: cloud-drift 44s linear infinite; }
 @keyframes cloud-drift {
   0%, 100% { margin-left: 0; }
   50% { margin-left: 40px; }
 }
 
+/* 관중석 — 멀리 있는 느낌: 저채도 + 살짝 블러 + 낮은 불투명도 */
+.stands {
+  position: absolute;
+  left: -6%; right: -6%;
+  bottom: var(--horizon);
+  height: var(--stand-h);
+  opacity: 0.6;
+  filter: blur(0.9px) saturate(0.5);
+}
+/* 스탠드 뒷벽/지붕 */
+.stands::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 22px 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 9px, transparent 9px),
+    linear-gradient(180deg, #cbd7c0 0%, #b3c4a7 46%, #9aad8e 100%);
+  border-radius: 12px 12px 0 0;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.55);
+}
+/* 관중 = 점 패턴 3겹 (흰 / 그린 / 오렌지) */
+.stands-crowd {
+  position: absolute;
+  inset: 16px 7px 26px 7px;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.8) 1.5px, transparent 1.9px),
+    radial-gradient(circle, rgba(47, 92, 30, 0.55) 1.5px, transparent 1.9px),
+    radial-gradient(circle, rgba(239, 91, 37, 0.4) 1.5px, transparent 1.9px),
+    radial-gradient(circle, rgba(120, 140, 110, 0.4) 1.3px, transparent 1.7px),
+    /* 관중석 계단(열) 구분선 */
+    repeating-linear-gradient(180deg, rgba(80, 100, 70, 0.16) 0 1px, transparent 1px 10px);
+  background-size: 12px 10px, 12px 10px, 25px 20px, 19px 15px, 100% 100%;
+  background-position: 0 0, 6px 5px, 3px 13px, 9px 8px, 0 0;
+}
+/* 그라운드 펜스 / 광고판 */
+.stands-board {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 22px;
+  background: repeating-linear-gradient(90deg, #eef0e6 0 36px, #dae1cd 36px 72px);
+  border-top: 2px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 2px 4px rgba(31, 63, 20, 0.18);
+}
+
+/* 삼각 깃발 가랜드 — 관중석 위에 한 줄 */
+.garland {
+  position: absolute;
+  left: -6%; right: -6%;
+  bottom: calc(var(--horizon) + var(--stand-h) - 4px);
+  height: 22px;
+  opacity: 0.75;
+  filter: saturate(0.75);
+  background-repeat: repeat-x;
+  background-size: 54px 22px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='54' height='22' viewBox='0 0 54 22'%3E%3Cpath d='M0 2.5 H54' stroke='%233f7a25' stroke-width='1.6' fill='none'/%3E%3Cpath d='M2 3 L16 3 L9 20 Z' fill='%23a8d95a'/%3E%3Cpath d='M20 3 L34 3 L27 20 Z' fill='%23fff6d8'/%3E%3Cpath d='M38 3 L52 3 L45 20 Z' fill='%23ff9a3c'/%3E%3C/svg%3E");
+}
+
+/* 잔디 — 잔디 깎은 자국(가로 줄무늬). 아래로 갈수록 줄이 넓어져 원근감을 준다.
+   두 톤의 명도 차를 작게 유지해 대비를 낮춘다. */
+.pitch {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: var(--horizon);
+  background: linear-gradient(180deg,
+    #93c063 0 4%,
+    #9dc86f 4% 9.5%,
+    #93c063 9.5% 17%,
+    #9dc86f 17% 27%,
+    #93c063 27% 39%,
+    #9dc86f 39% 53%,
+    #93c063 53% 69%,
+    #9dc86f 69% 87%,
+    #93c063 87% 100%);
+}
+/* 지평선 쪽을 살짝 밝게 눌러 원근감 + 배경 대비 완화 */
+.pitch::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 253, 244, 0.5) 0%, rgba(255, 253, 244, 0) 34%);
+}
+.pitch-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .game-inner {
   position: relative;
+  z-index: 1;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -318,7 +446,7 @@ body {
   padding: 20px 22px calc(22px + env(safe-area-inset-bottom));
 }
 
-/* 골대 */
+/* 골대 — 항상 화면 중앙 고정 (탭 목표 지점만 랜덤으로 움직인다) */
 .goal {
   position: relative;
   width: min(72%, 280px);
@@ -360,11 +488,12 @@ body {
     0 0 0 3px var(--melon-500),
     inset 0 3px 8px rgba(31, 63, 20, 0.14);
 }
+/* 탭 목표 지점 — --target-shift: 트랙 중앙 기준 오프셋(px). JS가 매 판 .game-inner에 세팅. */
 .goal-zone {
   position: absolute;
   top: -4px;
   bottom: -4px;
-  left: 50%;
+  left: calc(50% + var(--target-shift, 0px));
   width: var(--goal-zone-width, 26%);
   transform: translateX(-50%);
   background: linear-gradient(180deg, rgba(200, 232, 107, 0.85), rgba(168, 217, 90, 0.7));
@@ -379,7 +508,7 @@ body {
   position: absolute;
   top: -10px;
   bottom: -10px;
-  left: 50%;
+  left: calc(50% + var(--target-shift, 0px));
   width: 3.5px;
   transform: translateX(-50%);
   background: var(--orange-deep);
@@ -445,23 +574,6 @@ body {
   30%  { transform: rotate(-14deg) translateX(-6px); }
   60%  { transform: rotate(10deg) translateX(8px) scale(1.06); }
   100% { transform: rotate(0deg); }
-}
-
-/* 잔디 */
-.grass {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 120px;
-  background: linear-gradient(180deg, var(--melon-400) 0%, var(--melon-500) 100%);
-  clip-path: ellipse(80% 100% at 50% 100%);
-  z-index: -1;
-}
-.grass-line {
-  position: absolute;
-  top: 34px; left: 10%; right: 10%;
-  height: 3px;
-  background: rgba(255, 246, 216, 0.55);
-  border-radius: 999px;
 }
 
 /* 탭 버튼 */

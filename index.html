@@ -38,9 +38,43 @@
 
     <!-- ═══════════ 게임 화면 ═══════════ -->
     <section id="screen-game" class="screen">
-      <div class="sky">
-        <div class="cloud cloud-1"></div>
-        <div class="cloud cloud-2"></div>
+      <!-- 경기장 배경 (장식 전용 · 채도/대비를 낮춰 공과 트랙을 방해하지 않는다) -->
+      <div class="field" aria-hidden="true">
+        <div class="sky">
+          <div class="cloud cloud-1"></div>
+          <div class="cloud cloud-2"></div>
+          <div class="cloud cloud-3"></div>
+        </div>
+
+        <!-- 삼각 깃발 가랜드 -->
+        <div class="garland"></div>
+
+        <!-- 관중석 -->
+        <div class="stands">
+          <div class="stands-crowd"></div>
+          <div class="stands-board"></div>
+        </div>
+
+        <!-- 잔디 + 필드 라인 -->
+        <div class="pitch">
+          <svg class="pitch-lines" viewBox="0 0 390 320" preserveAspectRatio="none">
+            <g fill="none" stroke="#ffffff" stroke-opacity="0.42" stroke-width="3"
+               stroke-linejoin="round" vector-effect="non-scaling-stroke">
+              <!-- 골라인 -->
+              <path d="M-10 30 H400" />
+              <!-- 페널티 박스 (원근 사다리꼴) -->
+              <path d="M52 30 L338 30 L392 176 L-2 176 Z" />
+              <!-- 골 에어리어 -->
+              <path d="M142 30 L248 30 L259 84 L131 84 Z" />
+              <!-- 페널티 아크 -->
+              <path d="M143 176 Q195 224 247 176" />
+              <!-- 사이드라인 -->
+              <path d="M-24 320 L18 30" />
+              <path d="M414 320 L372 30" />
+            </g>
+            <circle cx="195" cy="132" r="3.5" fill="#ffffff" fill-opacity="0.42" />
+          </svg>
+        </div>
       </div>
 
       <div class="game-inner">
@@ -57,16 +91,12 @@
             <div class="goal-zone-center"></div>
             <img id="ball" src="assets/images/ball.png" alt="공" class="ball" draggable="false" />
           </div>
-          <div class="track-hint"><span>◀</span> 중앙에서 탭! <span>▶</span></div>
+          <div class="track-hint"><span>◀</span> 목표 라인에서 탭! <span>▶</span></div>
         </div>
 
         <!-- 로니 -->
         <div class="game-roni-wrap">
           <img id="game-roni" src="assets/images/roni.png" alt="로니" class="game-roni" draggable="false" />
-        </div>
-
-        <div class="grass">
-          <div class="grass-line"></div>
         </div>
 
         <button id="btn-tap" class="btn-tap" type="button">

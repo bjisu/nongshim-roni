@@ -9,6 +9,12 @@
 const CONFIG = {
   BALL_SPEED_RATIO: 1.2,      // 초당 이동 거리 = 트랙폭 × 이 값 (PRD 5.1)
   COUNTDOWN_FROM: 3,          // 카운트다운 시작 숫자
+
+  /* ── 탭 목표 지점 랜덤 위치 (골대 그래픽은 중앙 고정) ── */
+  TARGET_MIN_RATIO: 0.25,     // 트랙 폭 기준 목표 지점 최소 위치
+  TARGET_MAX_RATIO: 0.75,     // 〃 최대 위치
+  TARGET_MIN_DELTA: 0.12,     // 직전 판과 이만큼은 떨어지게 (같은 자리 반복 방지)
+
   INPUT_LOCK_MS: 1700,        // 탭 후 입력 잠금 시간 (PRD 4.2: 1.5~2초)
   RESULT_DELAY_MS: 950,       // 판정 플래시 후 결과 화면 전환까지 대기
 
@@ -67,6 +73,7 @@ const el = {
 const state = {
   phase: "landing",        // landing | countdown | playing | judged | result
   ballX: 0,                // 공 중심의 현재 x (px, 트랙 내부 기준)
+  targetRatio: 0.5,        // 탭 목표 지점 (트랙 폭 대비 비율 · 리사이즈에도 유지됨)
   direction: 1,            // 1: →, -1: ←
   rafId: null,
   lastTime: null,
@@ -101,6 +108,32 @@ function renderLanding() {
   state.phase = "landing";
 }
 
+/* ── 탭 목표 지점 ─────────────────────────
+   골대 그래픽은 중앙 고정. 트랙 위의 골존 하이라이트 + 오렌지 목표 라인만 움직인다.
+   위치는 "비율"만 상태로 들고, px는 항상 현재 트랙 폭에서 다시 계산한다.
+   → 화면 회전/리사이즈에도 상대 위치가 그대로 유지된다. */
+function pickTarget() {
+  const { TARGET_MIN_RATIO: lo, TARGET_MAX_RATIO: hi, TARGET_MIN_DELTA: gap } = CONFIG;
+  const prev = state.targetRatio;
+  const roll = () => lo + Math.random() * (hi - lo);
+  let r = roll();
+  // 직전 위치와 너무 가까우면 몇 번 다시 뽑는다 (무한루프 방지 위해 횟수 제한)
+  for (let i = 0; i < 6 && Math.abs(r - prev) < gap; i++) r = roll();
+  state.targetRatio = r;
+}
+
+/* 트랙 좌표계에서의 목표 지점 x (px) */
+function targetCenterX() {
+  return state.targetRatio * el.track.clientWidth;
+}
+
+/* 골존 하이라이트 + 목표 라인을 함께 이동.
+   둘 다 CSS에서 --target-shift(트랙 중앙 기준 오프셋 px)를 읽는다. */
+function applyTarget() {
+  const shift = (state.targetRatio - 0.5) * el.track.clientWidth;
+  el.gameInner.style.setProperty("--target-shift", `${shift}px`);
+}
+
 /* ── 게임 시작: 카운트다운 → 공 이동 ─────── */
 function startGame() {
   stopBall();
@@ -110,6 +143,10 @@ function startGame() {
   el.gameRoni.classList.remove("is-kicking");
   el.judgeFlash.classList.add("hidden");
   resetKickBall();
+
+  // 목표 지점 랜덤화 — 카운트다운 전에 적용해서 어디를 노릴지 미리 보이게 한다
+  pickTarget();
+  applyTarget();
 
   // 공을 좌측 끝에서 대기
   state.ballX = 0;
@@ -254,10 +291,13 @@ function judge() {
   el.btnTap.disabled = true;
 
   // 정확도는 반드시 "탭한 순간"의 공 위치로 계산 (연출과 무관)
+  // 기준은 트랙 중앙이 아니라 이번 판의 랜덤 목표 지점.
+  // maxDist = 목표 지점에서 트랙 양 끝 중 "먼 쪽"까지 → 목표가 어디에 있든 0~100% 스케일 유지.
   const trackWidth = el.track.clientWidth;
-  const centerX = trackWidth / 2;
-  const distance = Math.abs(state.ballX - centerX);
-  const accuracy = Math.max(0, Math.round(100 - (distance / centerX) * 100));
+  const targetX = targetCenterX();
+  const maxDist = Math.max(targetX, trackWidth - targetX);
+  const distance = Math.abs(state.ballX - targetX);
+  const accuracy = Math.max(0, Math.round(100 - (distance / maxDist) * 100));
 
   const grade = CONFIG.GRADES.find((g) => accuracy >= g.min);
   const prevBest = loadBest();
@@ -267,7 +307,7 @@ function judge() {
   state.lastResult = { accuracy, grade, isNewRecord };
 
   // 로니 킥 모션 + 공 비행을 같은 타이밍에 시작
-  const side = state.ballX < centerX ? -1 : 1;
+  const side = state.ballX < targetX ? -1 : 1;
   el.gameRoni.classList.add("is-kicking");
 
   flyBall(grade, side).then(() => {
@@ -349,8 +389,10 @@ screens.game.addEventListener("pointerdown", (e) => {
   judge();
 });
 
-// 화면 회전/리사이즈 시 공 위치 보정
+// 화면 회전/리사이즈 시 타깃(비율 기준) 재배치 + 공 위치 보정
 window.addEventListener("resize", () => {
+  if (state.phase === "landing" || state.phase === "result") return;
+  applyTarget();
   if (state.phase === "playing") {
     const { min, max } = trackMetrics();
     state.ballX = Math.min(Math.max(state.ballX, min), max);
