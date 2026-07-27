@@ -1,0 +1,713 @@
+/* ═══════════════════════════════════════════
+   메론킥 슛! — style.css
+   농심 메론킥 패키지 무드 (멜론 그린 + 크림 + 그물망)
+   ═══════════════════════════════════════════ */
+
+:root {
+  /* ── 메론킥 팔레트 ── */
+  --melon-50:  #f6fce8;
+  --melon-100: #edf8d4;
+  --melon-200: #dcf0a9;
+  --melon-300: #c8e86b;   /* 밝은 연두 (패키지 배경) */
+  --melon-400: #a8d95a;   /* 멜론 과육 */
+  --melon-500: #7cbf3f;
+  --melon-600: #4e8f2f;   /* 진한 잎 그린 */
+  --melon-700: #3f7a25;
+  --melon-800: #2f5c1e;
+  --melon-900: #1f3f14;
+
+  /* ── 크림/바닐라 (과자 속 크림) ── */
+  --cream: #fff6d8;
+  --cream-100: #fffdf4;
+  --cream-deep: #f4e5ae;
+
+  /* ── 포인트 (CTA 전용 웜 오렌지) ── */
+  --orange: #ff9a3c;
+  --orange-deep: #ef5b25;
+  --orange-shadow: #bf4114;
+
+  --sky-1: #b6e9ff;
+  --sky-2: #e9faff;
+  --ink: #23361a;
+  --ink-soft: #5b7049;
+  --white: #ffffff;
+
+  --radius-lg: 28px;
+  --radius-md: 18px;
+  --shadow-card: 0 18px 40px -18px rgba(31, 63, 20, 0.5);
+  --font-display: "Jua", sans-serif;
+  --font-body: "Gowun Dodum", sans-serif;
+
+  /* 패키지 로고용 흰 외곽선 — 16방향 text-shadow.
+     -webkit-text-stroke는 Chrome에서 글자 단위로 stroke→fill 순서를 반복해
+     다음 글자의 외곽선이 앞 글자 면을 덮어(겹쳐 보임) 사용하지 않는다.
+     text-shadow는 요소 전체 글자 뒤에 깔리므로 서로를 침범하지 않는다. */
+  --logo-outline:
+    0.065em 0 0 var(--white), 0.06em 0.025em 0 var(--white),
+    0.046em 0.046em 0 var(--white), 0.025em 0.06em 0 var(--white),
+    0 0.065em 0 var(--white), -0.025em 0.06em 0 var(--white),
+    -0.046em 0.046em 0 var(--white), -0.06em 0.025em 0 var(--white),
+    -0.065em 0 0 var(--white), -0.06em -0.025em 0 var(--white),
+    -0.046em -0.046em 0 var(--white), -0.025em -0.06em 0 var(--white),
+    0 -0.065em 0 var(--white), 0.025em -0.06em 0 var(--white),
+    0.046em -0.046em 0 var(--white), 0.06em -0.025em 0 var(--white);
+
+  /* ── 멜론 그물망(네트) 타일 · 인라인 SVG ── */
+  --net-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cg fill='none' stroke='%232f5c1e' stroke-opacity='0.5' stroke-width='2.2' stroke-linecap='round' transform='translate(0 4)'%3E%3Cpath d='M0 0 Q17.5 -9 35 0 T70 0 T105 0 T140 0'/%3E%3Cpath d='M0 35 Q17.5 26 35 35 T70 35 T105 35 T140 35'/%3E%3Cpath d='M0 70 Q17.5 61 35 70 T70 70 T105 70 T140 70'/%3E%3Cpath d='M0 105 Q17.5 96 35 105 T70 105 T105 105 T140 105'/%3E%3Cpath d='M0 140 Q17.5 131 35 140 T70 140 T105 140 T140 140'/%3E%3Cpath d='M0 0 Q-9 17.5 0 35 T0 70 T0 105 T0 140'/%3E%3Cpath d='M35 0 Q26 17.5 35 35 T35 70 T35 105 T35 140'/%3E%3Cpath d='M70 0 Q61 17.5 70 35 T70 70 T70 105 T70 140'/%3E%3Cpath d='M105 0 Q96 17.5 105 35 T105 70 T105 105 T105 140'/%3E%3Cpath d='M140 0 Q131 17.5 140 35 T140 70 T140 105 T140 140'/%3E%3C/g%3E%3Cg fill='none' stroke='%23fff6d8' stroke-width='4.5' stroke-linecap='round'%3E%3Cpath d='M0 0 Q17.5 -9 35 0 T70 0 T105 0 T140 0'/%3E%3Cpath d='M0 35 Q17.5 26 35 35 T70 35 T105 35 T140 35'/%3E%3Cpath d='M0 70 Q17.5 61 35 70 T70 70 T105 70 T140 70'/%3E%3Cpath d='M0 105 Q17.5 96 35 105 T70 105 T105 105 T140 105'/%3E%3Cpath d='M0 140 Q17.5 131 35 140 T70 140 T105 140 T140 140'/%3E%3Cpath d='M0 0 Q-9 17.5 0 35 T0 70 T0 105 T0 140'/%3E%3Cpath d='M35 0 Q26 17.5 35 35 T35 70 T35 105 T35 140'/%3E%3Cpath d='M70 0 Q61 17.5 70 35 T70 70 T70 105 T70 140'/%3E%3Cpath d='M105 0 Q96 17.5 105 35 T105 70 T105 105 T105 140'/%3E%3Cpath d='M140 0 Q131 17.5 140 35 T140 70 T140 105 T140 140'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--melon-300);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* 데스크톱: 모바일 프레임 중앙 정렬 */
+#app {
+  position: relative;
+  width: 100%;
+  max-width: 430px;
+  height: 100dvh;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--cream);
+  box-shadow: 0 0 60px rgba(31, 63, 20, 0.3);
+}
+
+@media (min-width: 500px) {
+  body {
+    background:
+      radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.45), transparent 42%),
+      linear-gradient(160deg, var(--melon-300) 0%, var(--melon-600) 100%);
+    display: flex;
+    align-items: center;
+  }
+  #app { height: min(100dvh, 900px); border-radius: 0; }
+}
+
+/* ── 화면 전환 ─────────────────────────── */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  opacity: 0;
+}
+.screen.is-active {
+  display: flex;
+  opacity: 1;
+  animation: screen-in 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.99); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.hidden { display: none !important; }
+
+/* ── 멜론 그물망 오버레이 (랜딩 / 결과) ─── */
+#screen-landing::before,
+#screen-result::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--net-tile);
+  background-size: 140px 140px;
+  opacity: 0.22;              /* 크림 선 ≈12%, 그린 선 ≈6% */
+  pointer-events: none;
+}
+
+/* ── 버튼 공통 (패키지 스티커 느낌) ────── */
+.btn {
+  position: relative;
+  font-family: var(--font-display);
+  border: none;
+  cursor: pointer;
+  border-radius: 999px;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.btn:active { transform: translateY(2px) scale(0.98); }
+
+/* 캔디 광택 */
+.btn::after {
+  content: "";
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 5px;
+  height: 38%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.btn-primary {
+  padding: 18px 30px;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--white);
+  background: linear-gradient(180deg, var(--orange) 0%, var(--orange-deep) 100%);
+  border: 4px solid var(--white);
+  box-shadow:
+    0 6px 0 var(--orange-shadow),
+    0 16px 26px -10px rgba(191, 65, 20, 0.55),
+    0 0 0 3px rgba(47, 92, 30, 0.14);
+  text-shadow: 0 2px 0 rgba(120, 40, 8, 0.28);
+}
+.btn-primary:active {
+  box-shadow:
+    0 3px 0 var(--orange-shadow),
+    0 8px 16px -8px rgba(191, 65, 20, 0.5),
+    0 0 0 3px rgba(47, 92, 30, 0.14);
+}
+
+/* ═══════════════════════════════════════════
+   1. 랜딩 화면
+   ═══════════════════════════════════════════ */
+#screen-landing {
+  background:
+    radial-gradient(circle at 85% 6%, rgba(255, 255, 255, 0.8), transparent 34%),
+    linear-gradient(175deg, var(--melon-200) 0%, var(--melon-300) 52%, var(--melon-400) 100%);
+  align-items: center;
+  justify-content: center;
+}
+
+.landing-deco {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 246, 216, 0.55);
+}
+.deco-1 { width: 220px; height: 220px; top: -70px; left: -70px; }
+.deco-2 { width: 150px; height: 150px; bottom: -40px; right: -40px; background: rgba(78, 143, 47, 0.2); }
+
+.landing-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px 28px calc(24px + env(safe-area-inset-bottom));
+  width: 100%;
+}
+
+.landing-hero {
+  position: relative;
+  margin-bottom: 4px;
+  animation: hero-float 3s ease-in-out infinite;
+}
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.landing-roni {
+  width: 158px;
+  height: auto;
+  filter: drop-shadow(0 14px 18px rgba(31, 63, 20, 0.3));
+}
+.landing-ball {
+  position: absolute;
+  width: 62px;
+  left: -42px;
+  bottom: 10px;
+  animation: ball-spin 4s linear infinite;
+}
+@keyframes ball-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* 배지 = 패키지 씰 */
+.landing-badge {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  color: var(--melon-800);
+  background: linear-gradient(180deg, var(--cream-100), var(--cream));
+  border: 3px solid var(--white);
+  padding: 7px 16px 6px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+  box-shadow:
+    0 0 0 2.5px var(--melon-500),
+    0 6px 12px -6px rgba(31, 63, 20, 0.45);
+}
+
+/* 타이틀 = 스낵 패키지 로고 타이포 */
+.landing-title {
+  font-family: var(--font-display);
+  font-size: clamp(46px, 13.2vw, 66px);
+  line-height: 1.28;
+  letter-spacing: 0.05em;
+  text-indent: 0.05em;      /* 자간 때문에 생기는 중앙정렬 쏠림 보정 */
+  white-space: nowrap;
+  color: var(--melon-700);
+  text-shadow:
+    var(--logo-outline),
+    0 0.14em 0 var(--melon-800),
+    0 0.19em 0 rgba(31, 63, 20, 0.45),
+    0 0.3em 0.3em rgba(31, 63, 20, 0.3);
+  transform: rotate(-2.5deg);
+  margin: 6px 0 18px;
+}
+
+.landing-sub {
+  font-size: 16px;
+  color: var(--melon-900);
+  background: rgba(255, 253, 244, 0.72);
+  padding: 6px 16px;
+  border-radius: 999px;
+  margin-bottom: 20px;
+}
+
+.best-score {
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--cream-100);
+  border: 3px solid var(--white);
+  border-radius: 999px;
+  padding: 8px 18px;
+  margin-bottom: 18px;
+  box-shadow:
+    0 0 0 2px rgba(78, 143, 47, 0.3),
+    0 8px 14px -8px rgba(31, 63, 20, 0.45);
+}
+.best-score strong { font-family: var(--font-display); color: var(--orange-deep); font-size: 17px; }
+
+#btn-start { min-width: 230px; font-size: 24px; }
+
+/* ═══════════════════════════════════════════
+   2. 게임 화면
+   ═══════════════════════════════════════════ */
+#screen-game { background: linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 55%, var(--melon-200) 100%); }
+
+.sky { position: absolute; inset: 0 0 45% 0; pointer-events: none; }
+.cloud {
+  position: absolute;
+  width: 90px; height: 30px;
+  background: var(--white);
+  border-radius: 999px;
+  opacity: 0.92;
+  box-shadow: 22px -12px 0 -4px var(--white), -20px -8px 0 -8px var(--white);
+}
+.cloud-1 { top: 12%; left: 8%; animation: cloud-drift 26s linear infinite; }
+.cloud-2 { top: 5%; right: 10%; transform: scale(0.7); animation: cloud-drift 34s linear infinite reverse; }
+@keyframes cloud-drift {
+  0%, 100% { margin-left: 0; }
+  50% { margin-left: 40px; }
+}
+
+.game-inner {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 20px 22px calc(22px + env(safe-area-inset-bottom));
+}
+
+/* 골대 */
+.goal {
+  position: relative;
+  width: min(72%, 280px);
+  height: 118px;
+  margin-bottom: 26px;
+}
+.goal-frame {
+  position: absolute;
+  inset: 0;
+  border: 7px solid var(--white);
+  border-bottom: none;
+  border-radius: 14px 14px 0 0;
+  box-shadow:
+    0 -4px 10px rgba(31, 63, 20, 0.1),
+    inset 0 0 0 2px rgba(78, 143, 47, 0.18);
+}
+/* 골 네트도 멜론 그물망 톤으로 */
+.goal-net {
+  position: absolute;
+  inset: 7px 7px 0 7px;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(78, 143, 47, 0.34) 0 1.6px, transparent 1.6px 14px),
+    repeating-linear-gradient(90deg, rgba(78, 143, 47, 0.34) 0 1.6px, transparent 1.6px 14px);
+  background-color: rgba(255, 246, 216, 0.35);
+  border-radius: 8px 8px 0 0;
+  transform-origin: 50% 0;
+}
+
+/* 트랙 */
+.track-wrap { width: 100%; margin-bottom: 18px; }
+.track {
+  position: relative;
+  width: 100%;
+  height: 58px;
+  background: linear-gradient(180deg, var(--cream-100) 0%, var(--cream) 100%);
+  border: 4px solid var(--white);
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 3px var(--melon-500),
+    inset 0 3px 8px rgba(31, 63, 20, 0.14);
+}
+.goal-zone {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  left: 50%;
+  width: var(--goal-zone-width, 26%);
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(200, 232, 107, 0.85), rgba(168, 217, 90, 0.7));
+  border-inline: 2.5px dashed var(--melon-600);
+  animation: zone-pulse 1.4s ease-in-out infinite;
+}
+@keyframes zone-pulse {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.55; }
+}
+.goal-zone-center {
+  position: absolute;
+  top: -10px;
+  bottom: -10px;
+  left: 50%;
+  width: 3.5px;
+  transform: translateX(-50%);
+  background: var(--orange-deep);
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(239, 91, 37, 0.85);
+}
+.ball {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  will-change: transform;
+  filter: drop-shadow(0 5px 5px rgba(31, 63, 20, 0.32));
+  z-index: 2;
+}
+/* 슛 연출용 공 (JS가 .game-inner에 생성 · 위치는 rAF가 제어) */
+.kick-ball {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 6px 6px rgba(31, 63, 20, 0.28));
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* 퍼펙트킥: 골망 출렁임 */
+.goal-net.is-shaking { animation: net-shake 0.55s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes net-shake {
+  0%   { transform: scaleY(1) translateY(0); }
+  25%  { transform: scaleY(1.09) translateY(7px); }
+  50%  { transform: scaleY(0.97) translateY(-3px); }
+  75%  { transform: scaleY(1.03) translateY(2px); }
+  100% { transform: scaleY(1) translateY(0); }
+}
+
+.track-hint {
+  font-family: var(--font-display);
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: var(--melon-800);
+  margin-top: 10px;
+}
+.track-hint span { color: var(--orange-deep); }
+
+/* 로니 */
+.game-roni-wrap { position: relative; margin-bottom: 8px; }
+.game-roni {
+  width: 122px;
+  height: auto;
+  filter: drop-shadow(0 10px 12px rgba(31, 63, 20, 0.32));
+  transition: transform 0.2s ease;
+}
+.game-roni.is-kicking { animation: roni-kick 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes roni-kick {
+  0%   { transform: rotate(0deg); }
+  30%  { transform: rotate(-14deg) translateX(-6px); }
+  60%  { transform: rotate(10deg) translateX(8px) scale(1.06); }
+  100% { transform: rotate(0deg); }
+}
+
+/* 잔디 */
+.grass {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 120px;
+  background: linear-gradient(180deg, var(--melon-400) 0%, var(--melon-500) 100%);
+  clip-path: ellipse(80% 100% at 50% 100%);
+  z-index: -1;
+}
+.grass-line {
+  position: absolute;
+  top: 34px; left: 10%; right: 10%;
+  height: 3px;
+  background: rgba(255, 246, 216, 0.55);
+  border-radius: 999px;
+}
+
+/* 탭 버튼 */
+.btn-tap {
+  position: relative;
+  font-family: var(--font-display);
+  width: min(100%, 320px);
+  padding: 20px 0 18px;
+  font-size: 26px;
+  letter-spacing: 0.18em;
+  color: var(--white);
+  background: linear-gradient(180deg, var(--orange) 0%, var(--orange-deep) 100%);
+  border: 4px solid var(--white);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow:
+    0 7px 0 var(--orange-shadow),
+    0 18px 30px -12px rgba(191, 65, 20, 0.6),
+    0 0 0 3px rgba(47, 92, 30, 0.14);
+  text-shadow: 0 2px 0 rgba(120, 40, 8, 0.28);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.2s ease;
+}
+.btn-tap::after {
+  content: "";
+  position: absolute;
+  left: 5%; right: 5%; top: 5px;
+  height: 36%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+.btn-tap:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 var(--orange-shadow), 0 10px 18px -10px rgba(191, 65, 20, 0.5), 0 0 0 3px rgba(47, 92, 30, 0.14);
+}
+.btn-tap:disabled { filter: grayscale(0.6) brightness(0.92); pointer-events: none; }
+
+/* 카운트다운 */
+.countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(31, 63, 20, 0.34);
+  backdrop-filter: blur(3px);
+  z-index: 10;
+}
+.countdown span {
+  font-family: var(--font-display);
+  font-size: 120px;
+  color: var(--cream);
+  text-shadow: 0 8px 0 rgba(47, 92, 30, 0.75);
+  animation: count-pop 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes count-pop {
+  0%   { transform: scale(0.2); opacity: 0; }
+  35%  { transform: scale(1.15); opacity: 1; }
+  70%  { transform: scale(1); }
+  100% { transform: scale(0.9); opacity: 0.4; }
+}
+
+/* 판정 플래시 */
+.judge-flash {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: clamp(42px, 12vw, 52px);
+  line-height: 1.3;
+  letter-spacing: 0.05em;
+  text-indent: 0.05em;
+  color: var(--melon-700);
+  text-shadow:
+    var(--logo-outline),
+    0 0.14em 0 var(--melon-800),
+    0 0.26em 0.3em rgba(31, 63, 20, 0.35);
+  z-index: 11;
+  pointer-events: none;
+  animation: flash-pop 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes flash-pop {
+  0%   { transform: scale(0.3); opacity: 0; }
+  30%  { transform: scale(1.2); opacity: 1; }
+  75%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.05); opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════
+   3. 결과 화면
+   ═══════════════════════════════════════════ */
+#screen-result {
+  background:
+    radial-gradient(circle at 15% 10%, rgba(255, 255, 255, 0.7), transparent 36%),
+    linear-gradient(170deg, var(--melon-200) 0%, var(--melon-300) 55%, var(--melon-400) 100%);
+  align-items: center;
+  justify-content: center;
+}
+
+.result-inner {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 22px 26px calc(24px + env(safe-area-inset-bottom));
+  z-index: 2;
+}
+
+.new-record {
+  font-family: var(--font-display);
+  font-size: 17px;
+  color: var(--white);
+  background: linear-gradient(180deg, var(--orange) , var(--orange-deep));
+  border: 3px solid var(--white);
+  padding: 8px 20px 7px;
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 2px rgba(47, 92, 30, 0.18),
+    0 8px 18px -8px rgba(191, 65, 20, 0.7);
+  text-shadow: 0 2px 0 rgba(120, 40, 8, 0.28);
+  margin-bottom: 14px;
+  animation: badge-bounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes badge-bounce {
+  0% { transform: scale(0) rotate(-8deg); }
+  60% { transform: scale(1.15) rotate(3deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+/* 결과 카드 = 패키지 씰 */
+.result-card {
+  width: 100%;
+  background: linear-gradient(180deg, var(--white) 0%, var(--cream-100) 100%);
+  border-radius: var(--radius-lg);
+  padding: 26px 24px 22px;
+  text-align: center;
+  border: 5px solid var(--white);
+  box-shadow:
+    0 0 0 3px var(--melon-500),
+    var(--shadow-card);
+}
+
+.result-card-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  letter-spacing: 0.2em;
+  color: var(--melon-700);
+  margin-bottom: 2px;
+}
+
+.result-accuracy {
+  font-family: var(--font-display);
+  font-size: 84px;
+  line-height: 1.05;
+  color: var(--ink);
+}
+.result-accuracy em { font-style: normal; font-size: 40px; color: var(--melon-600); margin-left: 2px; }
+
+.accuracy-bar {
+  height: 13px;
+  background: var(--melon-100);
+  border: 1.5px solid var(--melon-200);
+  border-radius: 999px;
+  margin: 10px 6px 14px;
+  overflow: hidden;
+}
+.accuracy-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--melon-300), var(--melon-600));
+  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s;
+}
+
+.result-grade {
+  font-family: var(--font-display);
+  font-size: 34px;
+  margin-bottom: 12px;
+}
+.result-grade.grade-perfect { color: var(--orange-deep); }
+.result-grade.grade-good    { color: var(--melon-700); }
+.result-grade.grade-miss    { color: #7d8f6c; }
+
+.result-roni-wrap {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+.result-roni { width: 128px; height: auto; }
+.result-roni.pose-perfect { animation: roni-cheer 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) infinite alternate; }
+.result-roni.pose-good    { animation: roni-nod 1.2s ease-in-out infinite; }
+.result-roni.pose-miss    { filter: saturate(0.45) brightness(0.96); transform: rotate(-5deg); }
+@keyframes roni-cheer {
+  from { transform: translateY(0) rotate(-3deg); }
+  to   { transform: translateY(-12px) rotate(3deg); }
+}
+@keyframes roni-nod {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(4deg) translateY(-4px); }
+}
+.result-emote {
+  position: absolute;
+  top: -6px;
+  right: -22px;
+  font-size: 30px;
+  animation: emote-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes emote-pop {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+
+.result-comment { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 12px; }
+
+.result-best {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  border-top: 2px dashed var(--melon-200);
+  padding-top: 12px;
+}
+.result-best strong { font-family: var(--font-display); color: var(--melon-700); }
+
+.result-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  margin-top: 18px;
+}
+#btn-retry { font-size: 24px; padding: 19px 26px; letter-spacing: 0.08em; }
+
+/* 콘페티 */
+.confetti-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
+.confetti {
+  position: absolute;
+  top: -14px;
+  width: 10px; height: 14px;
+  border-radius: 3px;
+  animation: confetti-fall linear forwards;
+}
+@keyframes confetti-fall {
+  from { transform: translateY(0) rotate(0deg); opacity: 1; }
+  to   { transform: translateY(110vh) rotate(720deg); opacity: 0.7; }
+}

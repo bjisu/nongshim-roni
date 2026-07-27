@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>메론킥 슛!</title>
+  <meta name="description" content="공이 골대 중앙에 왔을 때 탭! 로니와 함께하는 원터치 킥 타이밍 게임" />
+  <meta property="og:title" content="메론킥 슛!" />
+  <meta property="og:description" content="공이 골대 중앙에 왔을 때 탭! 나의 킥 정확도는 몇 %?" />
+  <meta name="theme-color" content="#C8E86B" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ═══════════ 랜딩 화면 ═══════════ -->
+    <section id="screen-landing" class="screen is-active">
+      <div class="landing-deco deco-1"></div>
+      <div class="landing-deco deco-2"></div>
+      <div class="landing-inner">
+        <div class="landing-hero">
+          <img src="assets/images/roni.png" alt="로니" class="landing-roni" draggable="false" />
+          <img src="assets/images/ball.png" alt="" class="landing-ball" draggable="false" />
+        </div>
+        <p class="landing-badge">메론킥 프렌즈 · 로니</p>
+        <h1 class="landing-title">메론킥 슛!</h1>
+        <p class="landing-sub">공이 골대 중앙에 왔을 때 탭!</p>
+        <p id="best-score-label" class="best-score hidden">
+          🏆 내 최고기록 <strong id="best-score-value">0%</strong>
+        </p>
+        <button id="btn-start" class="btn btn-primary" type="button">시작하기</button>
+      </div>
+    </section>
+
+    <!-- ═══════════ 게임 화면 ═══════════ -->
+    <section id="screen-game" class="screen">
+      <div class="sky">
+        <div class="cloud cloud-1"></div>
+        <div class="cloud cloud-2"></div>
+      </div>
+
+      <div class="game-inner">
+        <!-- 골대 -->
+        <div class="goal">
+          <div class="goal-net"></div>
+          <div class="goal-frame"></div>
+        </div>
+
+        <!-- 트랙 -->
+        <div class="track-wrap">
+          <div id="track" class="track">
+            <div class="goal-zone"></div>
+            <div class="goal-zone-center"></div>
+            <img id="ball" src="assets/images/ball.png" alt="공" class="ball" draggable="false" />
+          </div>
+          <div class="track-hint"><span>◀</span> 중앙에서 탭! <span>▶</span></div>
+        </div>
+
+        <!-- 로니 -->
+        <div class="game-roni-wrap">
+          <img id="game-roni" src="assets/images/roni.png" alt="로니" class="game-roni" draggable="false" />
+        </div>
+
+        <div class="grass">
+          <div class="grass-line"></div>
+        </div>
+
+        <button id="btn-tap" class="btn-tap" type="button">
+          <span class="btn-tap-label">TAP!</span>
+        </button>
+      </div>
+
+      <!-- 카운트다운 오버레이 -->
+      <div id="countdown" class="countdown hidden">
+        <span id="countdown-num">3</span>
+      </div>
+
+      <!-- 판정 플래시 -->
+      <div id="judge-flash" class="judge-flash hidden"></div>
+    </section>
+
+    <!-- ═══════════ 결과 화면 ═══════════ -->
+    <section id="screen-result" class="screen">
+      <div id="confetti-layer" class="confetti-layer"></div>
+      <div class="result-inner">
+        <p id="new-record-badge" class="new-record hidden">🎉 최고기록 갱신!</p>
+        <div class="result-card">
+          <p class="result-card-title">나의 킥 정확도</p>
+          <p class="result-accuracy"><span id="result-number">0</span><em>%</em></p>
+          <div class="accuracy-bar"><div id="accuracy-fill" class="accuracy-fill"></div></div>
+          <p id="result-grade" class="result-grade">퍼펙트킥!</p>
+          <div class="result-roni-wrap">
+            <img id="result-roni" src="assets/images/roni.png" alt="로니" class="result-roni" draggable="false" />
+            <span id="result-emote" class="result-emote"></span>
+          </div>
+          <p id="result-comment" class="result-comment"></p>
+          <p class="result-best">내 최고기록 <strong id="result-best-value">0%</strong></p>
+        </div>
+        <div class="result-actions">
+          <button id="btn-retry" class="btn btn-primary" type="button">다시하기</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
