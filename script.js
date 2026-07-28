@@ -143,9 +143,9 @@ function saveBest(score) {
 }
 
 /* ── 골키퍼 (연출 전용) ────────────────────
-   조준·파워 중엔 default. 슈팅 순간:
-   골인 → 공과 "다른" 방향으로 다이빙(못 막은 연출),
-   옆 빗나감 → 공 방향으로 다이빙, 파워 과다 → 위로, 파워 부족 → 준비 자세 유지.
+   조준·파워 중엔 default. 슈팅 순간(판정 확정 후):
+   골인 → 반드시 공과 "다른" 방향으로 다이빙(못 막은 연출),
+   노골(옆 빗나감/파워 부족/과다) → 준비 자세(default) 유지.
    다음 슈팅 준비 시 default 복귀. 골인 판정에는 관여하지 않는다. */
 const keeperSrc = (pose) => `assets/images/roni_${pose}.png?${CONFIG.KEEPER_IMG_VERSION}`;
 // 4장 모두 프리로드 — 전환 순간 로딩 딜레이/깜빡임 방지
@@ -426,20 +426,20 @@ function shoot() {
   el.aimArrow.classList.add("hidden");
   el.phaseHint.textContent = "";
 
-  // 골키퍼 연출 (판정 무관): 공이 가는 방향 구간(좌/중/우)을 기준으로
-  //  골인 → 공과 "다른" 방향으로 다이빙 = 못 막은 것처럼
-  //  옆 빗나감 → 공 방향으로 다이빙 (따라갔지만 공이 밖으로)
-  //  파워 과다 → 위로 점프 (공이 그 위로 넘어감) · 파워 부족 → 준비 자세 유지
+  // 골키퍼 연출 — 판정(outcome)이 computeShot에서 확정된 "뒤"에 실행.
+  //  골인 → 반드시 공과 다른 방향으로 다이빙 (못 막은 것처럼):
+  //    공 왼쪽 → right/up 랜덤 · 공 오른쪽 → left/up 랜덤
+  //    공 중앙 → 공이 미세하게 쏠린 반대쪽(완전 중앙이면 left/right 랜덤)
+  //      — 중앙 존이라도 공이 살짝 오른쪽이면 오른쪽 다이빙은 같은 쪽으로 보여 제외
+  //  노골(옆 빗나감/파워 부족/과다) → 준비 자세(default) 유지
   const a = state.aimAngle / CONFIG.AIM_MAX_ANGLE; // -1 ~ 1
-  const ballZone = a < -CONFIG.KEEPER_ZONE_SPLIT ? "left" : a > CONFIG.KEEPER_ZONE_SPLIT ? "right" : "up";
   let pose = "default";
   if (shot.outcome === "goal") {
-    const others = ["left", "up", "right"].filter((z) => z !== ballZone);
-    pose = others[Math.floor(Math.random() * others.length)];
-  } else if (shot.outcome === "wide") {
-    pose = ballZone;
-  } else if (shot.outcome === "over") {
-    pose = "up";
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    if (a < -CONFIG.KEEPER_ZONE_SPLIT) pose = pick(["right", "up"]);      // 공 왼쪽
+    else if (a > CONFIG.KEEPER_ZONE_SPLIT) pose = pick(["left", "up"]);   // 공 오른쪽
+    else if (Math.abs(a) < 0.05) pose = pick(["left", "right"]);          // 완전 중앙
+    else pose = a > 0 ? "left" : "right";                                 // 중앙 존이지만 쏠림 반대쪽
   }
   setKeeperPose(pose);
 

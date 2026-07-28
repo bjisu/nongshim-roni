@@ -500,23 +500,15 @@ body {
   right: clamp(14px, 5%, 26px);
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
   opacity: 0.45;
   transition: opacity 0.2s ease;
   pointer-events: none;
 }
 .power-wrap.is-active { opacity: 1; }
-.power-label {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: clamp(13px, 4vw, 17px);
-  letter-spacing: 0.1em;
-  color: var(--white);
-  text-shadow: 0 2px 0 rgba(31, 63, 20, 0.55), 0 0 6px rgba(31, 63, 20, 0.4);
-}
 .power-bar {
   position: relative;
-  flex: 1;
+  width: min(78%, 320px);   /* 라벨 없이 게이지 바만 가로 중앙 */
   height: clamp(18px, 5.5vw, 26px);
   border-radius: 999px;
   border: 3px solid var(--white);
