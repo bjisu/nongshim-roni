@@ -335,6 +335,11 @@ body {
   gap: 10px;
 }
 .hud-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  line-height: 1;
   font-family: var(--font-display);
   font-weight: 600;
   font-size: clamp(12px, 3.6vw, 16px);
@@ -343,12 +348,12 @@ body {
   background: var(--white);
   border: 3px solid var(--white);
   border-radius: 999px;
-  padding: 8px 16px 7px;
+  padding: 8px 16px;
   box-shadow:
     0 0 0 2px #a9c97e,
     0 6px 12px -6px rgba(90, 70, 30, 0.4);
 }
-.hud-chip strong { color: #e0703a; font-size: 1.15em; font-weight: 800; margin-left: 2px; }
+.hud-chip strong { color: #e0703a; font-size: 1.15em; font-weight: 800; line-height: 1; }
 
 /* ── 골대 논리 영역 (과자 이동 범위 = 이 박스 안) ──
    위치/크기는 JS(layoutGame)가 배경 cover 크롭과 같은 수식으로
@@ -739,19 +744,14 @@ body {
   0%, 100% { transform: rotate(0); }
   50% { transform: rotate(4deg) translateY(-4px); }
 }
-.result-emote {
-  position: absolute;
-  top: -6px;
-  right: -22px;
-  font-size: 30px;
-  animation: emote-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+.result-comment {
+  font-size: 14.5px;
+  color: var(--ink-soft);
+  max-width: 20em;         /* 한 줄 최대 한글 20자 */
+  margin: 0 auto 12px;
+  text-align: center;
+  word-break: keep-all;    /* 단어 중간에서 끊기지 않게 */
 }
-@keyframes emote-pop {
-  from { transform: scale(0); }
-  to   { transform: scale(1); }
-}
-
-.result-comment { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 12px; }
 
 .result-best {
   font-size: 13.5px;

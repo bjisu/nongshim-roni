@@ -62,9 +62,9 @@ const CONFIG = {
 
   /* ── 결과 등급 (명중 횟수 기준) ── */
   GRADES: [
-    { minHits: 3, key: "perfect", label: "퍼펙트!",  emote: "🎉", comment: "3발 전부 명중! 로니가 신나서 환호하고 있어요!" },
-    { minHits: 1, key: "good",    label: "굿샷!",    emote: "😊", comment: "좋아요! 과자의 움직임을 읽으면 전부 맞힐 수 있어요." },
-    { minHits: 0, key: "miss",    label: "아쉬워요…", emote: "💦", comment: "괜찮아요! 파워는 초록~노랑 구간을 노려보세요." },
+    { minHits: 3, key: "perfect", label: "퍼펙트!",  comment: "3발 전부 명중! 로니가 신나서 환호하고 있어요!" },
+    { minHits: 1, key: "good",    label: "굿샷!",    comment: "좋아요! 과자의 움직임을 읽으면 전부 맞힐 수 있어요." },
+    { minHits: 0, key: "miss",    label: "아쉬워요…", comment: "괜찮아요! 파워는 초록~노랑 구간을 노려보세요." },
   ],
 };
 
@@ -102,7 +102,6 @@ const el = {
   resultHits: $("#result-hits"),
   resultGrade: $("#result-grade"),
   resultRoni: $("#result-roni"),
-  resultEmote: $("#result-emote"),
   resultComment: $("#result-comment"),
   resultBestValue: $("#result-best-value"),
   btnRetry: $("#btn-retry"),
@@ -528,11 +527,10 @@ function renderResult() {
   state.phase = "result";
   el.hitPopup.classList.add("hidden");
 
-  el.resultHits.textContent = `🎯 명중 ${hits} / ${CONFIG.SHOTS_PER_GAME}`;
+  el.resultHits.textContent = `명중 ${hits} / ${CONFIG.SHOTS_PER_GAME}`;
   el.resultGrade.textContent = grade.label;
   el.resultGrade.className = `result-grade grade-${grade.key}`;
   el.resultRoni.className = `result-roni pose-${grade.key}`;
-  el.resultEmote.textContent = grade.emote;
   el.resultComment.textContent = grade.comment;
   el.resultBestValue.textContent = `${loadBest() ?? score}점`;
   el.newRecordBadge.classList.toggle("hidden", !isNewRecord);
