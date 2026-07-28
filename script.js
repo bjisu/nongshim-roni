@@ -228,9 +228,9 @@ function timeUp() {
   }
 }
 
-/* ── 골대/과자 레이아웃 (반응형 핵심) ───────
+/* ── 골대 레이아웃 (반응형 핵심) ───────────
    background-size: cover와 동일한 수식으로 배경 그림 속 골대의
-   화면 좌표를 계산해 골대 논리 영역과 과자 크기를 맞춘다.
+   화면 좌표를 계산해 골대 논리 영역을 맞춘다 (골키퍼 크기의 기준).
    리사이즈/회전 시마다 다시 호출된다. */
 function layoutGame() {
   const W = screens.game.clientWidth;

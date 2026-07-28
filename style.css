@@ -9,17 +9,13 @@
   --melon-100: #edf8d4;
   --melon-200: #dcf0a9;
   --melon-300: #c8e86b;   /* 밝은 연두 (패키지 배경) */
-  --melon-400: #a8d95a;   /* 멜론 과육 */
   --melon-500: #7cbf3f;
   --melon-600: #4e8f2f;   /* 진한 잎 그린 */
   --melon-700: #3f7a25;
   --melon-800: #2f5c1e;
   --melon-900: #1f3f14;
 
-  /* ── 크림/바닐라 (과자 속 크림) ── */
-  --cream: #fff6d8;
-  --cream-100: #fffdf4;
-  --cream-deep: #f4e5ae;
+  --cream: #fff6d8;   /* 프레임 밑바탕 크림 */
 
   /* ── 포인트 (CTA 전용 웜 오렌지) ── */
   --orange: #ff9a3c;
@@ -382,7 +378,7 @@ body {
   50% { transform: scale(1.1); }
 }
 
-/* ── 골대 논리 영역 (과자 이동 범위 = 이 박스 안) ──
+/* ── 골대 논리 영역 (골키퍼 배치 기준 박스) ──
    위치/크기는 JS(layoutGame)가 배경 cover 크롭과 같은 수식으로
    계산해 px로 지정 → 어떤 화면비에서도 그림의 골대와 정렬. */
 .goal-area {
