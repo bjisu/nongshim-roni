@@ -136,6 +136,7 @@ const state = {
   rafId: null,
   lastTime: null,
   lastResult: null,   // { score, hits, grade, isNewRecord }
+  recordFadeT: null,  // "최고기록 갱신!" 페이드아웃 타이머
 };
 
 /* ── 최고기록 (localStorage · 총점 기준) ─── */
@@ -595,7 +596,15 @@ function renderResult() {
   el.resultRoni.className = `result-roni pose-${grade.key}`;
   el.resultComment.textContent = grade.comment;
   el.resultBestValue.textContent = `${loadBest() ?? score}점`;
-  el.newRecordBadge.classList.toggle("hidden", !isNewRecord);
+
+  // "최고기록 갱신!" — 표시 후 3초 뒤 부드럽게 페이드아웃 (재갱신 시 다시 표시)
+  clearTimeout(state.recordFadeT);
+  el.newRecordBadge.classList.remove("is-visible");
+  if (isNewRecord) {
+    void el.newRecordBadge.offsetWidth; // 애니메이션 재시작
+    el.newRecordBadge.classList.add("is-visible");
+    state.recordFadeT = setTimeout(() => el.newRecordBadge.classList.remove("is-visible"), 3000);
+  }
 
   showScreen("result");
 
