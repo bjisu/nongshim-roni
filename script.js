@@ -80,8 +80,6 @@ const screens = {
   result: $("#screen-result"),
 };
 const el = {
-  bestLabel: $("#best-score-label"),
-  bestValue: $("#best-score-value"),
   btnStart: $("#btn-start"),
   gameInner: $(".game-inner"),
   hudScore: $("#hud-score"),
@@ -161,13 +159,6 @@ function showScreen(name) {
 
 /* ── 랜딩 ────────────────────────────────── */
 function renderLanding() {
-  const best = loadBest();
-  if (best !== null) {
-    el.bestValue.textContent = `${best}점`;
-    el.bestLabel.classList.remove("hidden");
-  } else {
-    el.bestLabel.classList.add("hidden");
-  }
   showScreen("landing");
   state.phase = "landing";
 }

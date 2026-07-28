@@ -91,7 +91,8 @@ body {
   height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
-  background: var(--cream);
+  /* 화면 전환 중에도 밑바탕이 비치지 않게 프레임 자체도 같은 배경으로 채움 */
+  background: url("assets/images/bg.png") center / cover no-repeat, var(--cream);
   box-shadow: 0 0 60px rgba(31, 63, 20, 0.3);
 }
 
@@ -150,9 +151,10 @@ body {
   opacity: 1;
   animation: screen-in 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* 축소(scale<1)·이동 없이 확대→원위치로만: 전환 중 화면 밖 여백이 절대 안 비친다 */
 @keyframes screen-in {
-  from { opacity: 0; transform: translateY(14px) scale(0.99); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: scale(1.015); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 .hidden { display: none !important; }
@@ -287,26 +289,11 @@ body {
   box-shadow: 0 4px 10px -4px rgba(90, 70, 30, 0.35);
 }
 
-.best-score {
-  font-size: 15px;
-  color: var(--ink);
-  background: var(--white);
-  border: 3px solid var(--white);
-  border-radius: 999px;
-  padding: 8px 18px;
-  margin-bottom: 23px;
-  box-shadow:
-    0 0 0 2px #a9c97e,
-    0 8px 14px -8px rgba(90, 70, 30, 0.4);
-}
-.best-score strong { font-family: var(--font-display); font-weight: 800; color: var(--orange-deep); font-size: 17px; }
-
 /* 높이가 짧은 기기(≤700px): 랜딩 세로 여백 압축 */
 @media (max-height: 700px) {
   .landing-roni { width: clamp(96px, 30vw, 130px); }
   .landing-title { margin: 4px 0 17px; }
   .landing-sub { margin-bottom: 17px; }
-  .best-score { margin-bottom: 17px; }
 }
 
 /* ═══════════════════════════════════════════
@@ -350,7 +337,7 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 7px; /* 라벨 ↔ 수치 간격 — 세 칩 공통 */
   line-height: 1;
   height: clamp(34px, 9.4vw, 42px); /* 세 칩 높이 통일 (내용은 flex 세로 중앙) */
   font-family: var(--font-display);
@@ -361,32 +348,26 @@ body {
   background: var(--white);
   border: 3px solid var(--white);
   border-radius: 999px;
-  padding: 0 14px;
+  padding: 0 7px;
   box-shadow:
     0 0 0 2px #a9c97e,
     0 6px 12px -6px rgba(90, 70, 30, 0.4);
 }
-/* 좌우 칩은 같은 폭으로 대칭 (내용은 중앙 정렬)
-   최소 92px: 320px 화면에서도 그리드가 넘치지 않는 크기
-   최대 128px: 점수 4자리("1000") 내용보다 넉넉해 양쪽이 항상 같은 폭 */
-.hud-score,
-.hud-shots { min-width: clamp(92px, 30vw, 128px); }
+/* 좌우 칩: 최대 자릿수 텍스트("점수 1000" / "기회 x3")가 딱 맞는 폭 + 약간의 여유.
+   내용(라벨 + 고정폭 숫자)이 항상 같은 폭이라 숫자가 바뀌어도 칩 폭 불변 */
+/* 숫자: 내용 폭 그대로 (고정 min-width 없음) → 칩이 내용에 딱 맞아 좌우 여백이 항상 대칭.
+   tabular-nums라 같은 자릿수에서는 폭이 전혀 안 흔들리고,
+   자릿수가 늘 때(100→1000)만 칩이 커지며 그때도 대칭 유지 */
 .hud-chip strong {
   color: #e0703a;
   font-size: 1.15em;
   font-weight: 800;
   line-height: 1;
-  font-variant-numeric: tabular-nums; /* 같은 자릿수면 폭 완전 동일 */
-  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
-/* 최대 자릿수 기준 고정 폭 — 숫자가 바뀌어도 라벨이 밀리지 않는다.
-   (tabular 숫자는 ch(="0" 폭)보다 살짝 넓어 0.5ch 여유) */
-.hud-score strong { min-width: 4.5ch; }  /* "1000" */
-.hud-shots strong { min-width: 2.3ch; }  /* "x3" */
 
 /* ── 슈팅 제한시간 타이머 (상단 중앙 · 같은 스티커 스타일) ── */
-.hud-timer { gap: 6px; }
-.hud-timer strong { color: var(--melon-700); min-width: 2.3ch; } /* "10" */
+.hud-timer strong { color: var(--melon-700); }
 .timer-ring {
   width: clamp(16px, 4.6vw, 20px);
   height: clamp(16px, 4.6vw, 20px);
