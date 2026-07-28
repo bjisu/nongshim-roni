@@ -1,37 +1,70 @@
 /* ═══════════════════════════════════════════
    메론킥 슛! — script.js
-   PRD v1.0 (MVP) 기준 구현 · Firebase/서버 미사용
+   v2.0 방향+파워 슈팅 게임 · Firebase/서버 미사용
+   조작: ① 탭 → 조준 화살표 고정  ② 탭 → 파워 고정 + 슈팅
+   한 게임 3회 슈팅 · 명중당 100점 · 최대 300점
    ═══════════════════════════════════════════ */
 
 "use strict";
 
-/* ── 조정 가능한 상수 (난이도/등급 튜닝은 여기서) ── */
+/* ── 조정 가능한 상수 (난이도/연출 튜닝은 전부 여기서) ── */
 const CONFIG = {
-  BALL_SPEED_RATIO: 1.2,      // 초당 이동 거리 = 트랙폭 × 이 값 (PRD 5.1)
-  COUNTDOWN_FROM: 3,          // 카운트다운 시작 숫자
+  /* ── 게임 구조 ── */
+  SHOTS_PER_GAME: 3,          // 한 게임 슈팅 횟수
+  SCORE_PER_HIT: 100,         // 명중당 점수
+  COUNTDOWN_FROM: 3,          // 시작 카운트다운
 
-  /* ── 탭 목표 지점 랜덤 위치 (골대 그래픽은 중앙 고정) ── */
-  TARGET_MIN_RATIO: 0.25,     // 트랙 폭 기준 목표 지점 최소 위치
-  TARGET_MAX_RATIO: 0.75,     // 〃 최대 위치
-  TARGET_MIN_DELTA: 0.12,     // 직전 판과 이만큼은 떨어지게 (같은 자리 반복 방지)
+  /* ── 배경 이미지 속 골대 위치 (bg.png 기준 비율) ──
+     골대 논리 영역은 JS가 background-size: cover와 같은 수식으로
+     매 리사이즈마다 계산한다 → 어떤 화면비에서도 그림의 골대와 정렬됨. */
+  BG_IMAGE_W: 608,            // bg.png 원본 크기
+  BG_IMAGE_H: 1088,
+  BG_GOAL_RECT: { x1: 0.178, x2: 0.822, y1: 0.400, y2: 0.545 }, // 골대 안쪽 영역 (이미지 대비 비율)
 
-  INPUT_LOCK_MS: 1700,        // 탭 후 입력 잠금 시간 (PRD 4.2: 1.5~2초)
-  RESULT_DELAY_MS: 950,       // 판정 플래시 후 결과 화면 전환까지 대기
+  /* ── 타깃(메론킥 과자) ──
+     골대 안 잔디 바닥(골라인 근처)에 서 있다. 조준·슈팅 중에는 고정.
+     슛 1회가 끝날 때마다 바닥을 따라 새 랜덤 "가로" 위치로 스르륵 이동.
+     첫 위치도 랜덤. 크기·거리 전부 골대 크기 대비 비율 → 화면 크기 무관 동일 난이도. */
+  SNACK_SIZE_RATIO: 0.21,       // 과자 박스 = 골대 폭 × 이 값
+  SNACK_AREA_INSET_X: 0.08,     // 바닥 이동 범위: 좌우 여백 (골대 폭 대비 비율)
+  SNACK_GROUND_OFFSET_RATIO: 0.015, // 골대 하단에서 이만큼 위에 발 (골대 높이 대비)
+  SNACK_MIN_JUMP_RATIO: 0.16,   // 새 위치는 직전과 최소 이만큼 (이동 범위 대비 비율)
+  SNACK_MOVE_MS: 380,           // 새 위치까지 이동 시간 (ease-out · 짧고 담백하게)
 
-  /* ── 슛 연출 (공이 골대로 날아가는 구간) ── */
-  KICK_DURATION_MS: 620,      // 연출 길이 (0.5~0.7초 권장)
-  KICK_ARC_HEIGHT: 130,       // 포물선 최고점 높이 (px)
-  KICK_END_SCALE: 0.46,       // 도착 시점 공 크기 배율 (원근감)
-  KICK_SPIN_TURNS: 1.6,       // 날아가는 동안 회전 바퀴 수
-  KICK_GOOD_SPREAD: 0.28,     // 굿샷 착지 지점: 골대 너비 × 이 값만큼 좌/우로
-  KICK_MISS_SPREAD: 0.85,     // 헛발질: 골대 너비 × 이 값만큼 밖으로
-  KICK_MISS_RISE: 46,         // 헛발질: 골대 상단보다 이만큼 더 위로
+  /* ── 1단계: 드래그 조준 ──
+     공을 터치(클릭)하면 조준 시작, 손가락을 따라 화살표가 실시간 회전,
+     떼면 그 방향으로 고정. */
+  AIM_MAX_ANGLE: 38,          // 조준 각도 제한 (도 · 좌우 대칭 · 골대를 크게 벗어나지 않는 범위)
+  AIM_SPREAD_RATIO: 1.15,     // 최대 각도일 때 수평 도달 거리 = 골대 폭 절반 × 이 값
+  BALL_GRAB_RADIUS: 2.6,      // 공 반지름 × 이 값 안을 터치하면 조준 시작 (손가락 오차 허용)
 
-  STORAGE_KEY: "roni_best_score", // PRD 5.4
-  GRADES: [                   // PRD 5.3 등급 기준
-    { min: 90, key: "perfect", label: "퍼펙트킥!", emote: "🎉", comment: "골대 정중앙 명중! 로니가 신나서 폴짝폴짝 뛰고 있어요." },
-    { min: 60, key: "good",    label: "굿샷!",     emote: "😊", comment: "좋은 킥이에요! 조금만 더 중앙을 노려볼까요?" },
-    { min: 0,  key: "miss",    label: "헛발질…",   emote: "💦", comment: "아쉬워요! 공이 중앙에 오는 순간을 노려보세요." },
+  /* ── 2단계: 파워 게이지 ── */
+  POWER_SWEEP_SPEED: 1.1,     // 게이지 왕복 속도 (1초당 편도 횟수)
+  POWER_GOAL_MIN: 0.38,       // 이 미만이면 골대까지 못 감 (약함)
+  POWER_GOAL_MAX: 0.82,       // 이 초과면 골대 위로 넘어감 (너무 강함)
+
+  /* ── 슛 비행 연출 (거리 값은 화면 높이 대비 비율) ── */
+  FLY_DURATION_MS: 700,       // 비행 시간
+  FLY_ARC_RATIO: 0.145,       // 포물선 최고점 = 화면 높이 × 이 값
+  FLY_END_SCALE: 0.38,        // 도착 시점 공 크기 배율 (원근감)
+  FLY_SPIN_TURNS: 1.5,        // 회전 바퀴 수
+  SHORT_LAND_MARGIN_RATIO: 0.032, // 파워 부족 시 골대 아래 착지 여유 (화면 높이 대비)
+  OVER_RISE_RATIO: 0.105,     // 파워 초과 시 골대 상단 위로 솟는 높이 (화면 높이 대비)
+
+  /* ── 판정 ── */
+  HIT_RADIUS_RATIO: 0.85,     // 명중 반경 = 과자 크기 × 이 값 (과자가 골대에 비례하므로 화면 크기 무관 동일 난이도)
+
+  /* ── 흐름 ── */
+  NEXT_SHOT_DELAY_MS: 950,    // 판정 후 다음 슈팅 준비까지 대기
+  RESULT_DELAY_MS: 1200,      // 마지막 슛 판정 후 결과 화면까지 대기
+
+  STORAGE_KEY: "roni_best_score", // 최고기록 (총점 기준 · 기존 키 재활용)
+
+  /* ── 결과 등급 (명중 횟수 기준) ── */
+  GRADES: [
+    { minHits: 3, key: "perfect", label: "퍼펙트!",  emote: "🎉", comment: "3발 전부 명중! 로니가 신나서 환호하고 있어요!" },
+    { minHits: 1, key: "good",    label: "굿샷!",    emote: "😊", comment: "좋아요! 과자의 움직임을 읽으면 전부 맞힐 수 있어요." },
+    { minHits: 0, key: "miss",    label: "아쉬워요…", emote: "💦", comment: "괜찮아요! 파워는 초록~노랑 구간을 노려보세요." },
   ],
 };
 
@@ -47,19 +80,26 @@ const el = {
   bestValue: $("#best-score-value"),
   btnStart: $("#btn-start"),
   gameInner: $(".game-inner"),
-  goal: $(".goal"),
-  goalNet: $(".goal-net"),
-  track: $("#track"),
-  ball: $("#ball"),
-  kickBall: null,          // 연출용 공 (최초 슛 때 생성)
-  btnTap: $("#btn-tap"),
-  gameRoni: $("#game-roni"),
+  hudScore: $("#hud-score"),
+  hudShots: $("#hud-shots"),
+  goalArea: $("#goal-area"),
+  goalNetFx: $("#goal-net-fx"),
+  snack: $("#snack"),
+  snackImg: $("#snack-img"),
+  hitPopup: $("#hit-popup"),
+  aimArrow: $("#aim-arrow"),
+  shootBall: $("#shoot-ball"),
+  flyBall: $("#fly-ball"),
+  powerCursor: $("#power-cursor"),
+  powerWrap: $(".power-wrap"),
+  phaseHint: $("#phase-hint"),
   countdown: $("#countdown"),
   countdownNum: $("#countdown-num"),
   judgeFlash: $("#judge-flash"),
   newRecordBadge: $("#new-record-badge"),
   resultNumber: $("#result-number"),
   accuracyFill: $("#accuracy-fill"),
+  resultHits: $("#result-hits"),
   resultGrade: $("#result-grade"),
   resultRoni: $("#result-roni"),
   resultEmote: $("#result-emote"),
@@ -71,16 +111,27 @@ const el = {
 
 /* ── 상태 ────────────────────────────────── */
 const state = {
-  phase: "landing",        // landing | countdown | playing | judged | result
-  ballX: 0,                // 공 중심의 현재 x (px, 트랙 내부 기준)
-  targetRatio: 0.5,        // 탭 목표 지점 (트랙 폭 대비 비율 · 리사이즈에도 유지됨)
-  direction: 1,            // 1: →, -1: ←
+  phase: "landing",   // landing | countdown | aim | power | fly | wait | result
+  score: 0,
+  shotsLeft: CONFIG.SHOTS_PER_GAME,
+  hits: 0,
+
+  aimAngle: 0,        // 현재 화살표 각도 (도)
+  aimPointerId: null, // 조준 중인 포인터 id
+  power: 0,           // 현재 게이지 값 (0~1)
+  powerDir: 1,        // 게이지 진행 방향
+
+  snackXR: 0.5,       // 과자 가로 위치 (이동 범위 내 0~1 비율 · 리사이즈에도 상대 위치 유지)
+  snackSize: 66,      // 현재 과자 박스 px (layoutGame이 골대 크기로부터 계산)
+  snackHop: null,     // 통통 이동 중 데이터 { fromXR, toXR, start }
+
+  fly: null,          // 비행 중 데이터 { from, to, start, outcome, ... }
   rafId: null,
   lastTime: null,
-  lastResult: null,        // { accuracy, grade, isNewRecord }
+  lastResult: null,   // { score, hits, grade, isNewRecord }
 };
 
-/* ── 최고기록 (localStorage) ─────────────── */
+/* ── 최고기록 (localStorage · 총점 기준) ─── */
 function loadBest() {
   const v = Number(localStorage.getItem(CONFIG.STORAGE_KEY));
   return Number.isFinite(v) && v > 0 ? v : null;
@@ -88,6 +139,11 @@ function loadBest() {
 function saveBest(score) {
   try { localStorage.setItem(CONFIG.STORAGE_KEY, String(score)); } catch (_) { /* 시크릿 모드 등 */ }
 }
+
+/* 과자 이미지 없으면 CSS 임시 도형으로
+   (스크립트 로드 전에 이미 로드 실패했을 수도 있어 complete 상태도 확인) */
+el.snackImg.addEventListener("error", () => el.snack.classList.add("no-img"));
+if (el.snackImg.complete && el.snackImg.naturalWidth === 0) el.snack.classList.add("no-img");
 
 /* ── 화면 전환 ───────────────────────────── */
 function showScreen(name) {
@@ -99,7 +155,7 @@ function showScreen(name) {
 function renderLanding() {
   const best = loadBest();
   if (best !== null) {
-    el.bestValue.textContent = `${best}%`;
+    el.bestValue.textContent = `${best}점`;
     el.bestLabel.classList.remove("hidden");
   } else {
     el.bestLabel.classList.add("hidden");
@@ -108,58 +164,129 @@ function renderLanding() {
   state.phase = "landing";
 }
 
-/* ── 탭 목표 지점 ─────────────────────────
-   골대 그래픽은 중앙 고정. 트랙 위의 골존 하이라이트 + 오렌지 목표 라인만 움직인다.
-   위치는 "비율"만 상태로 들고, px는 항상 현재 트랙 폭에서 다시 계산한다.
-   → 화면 회전/리사이즈에도 상대 위치가 그대로 유지된다. */
-function pickTarget() {
-  const { TARGET_MIN_RATIO: lo, TARGET_MAX_RATIO: hi, TARGET_MIN_DELTA: gap } = CONFIG;
-  const prev = state.targetRatio;
-  const roll = () => lo + Math.random() * (hi - lo);
-  let r = roll();
-  // 직전 위치와 너무 가까우면 몇 번 다시 뽑는다 (무한루프 방지 위해 횟수 제한)
-  for (let i = 0; i < 6 && Math.abs(r - prev) < gap; i++) r = roll();
-  state.targetRatio = r;
+/* ── HUD ─────────────────────────────────── */
+function renderHud() {
+  el.hudScore.textContent = state.score;
+  el.hudShots.textContent = `x${state.shotsLeft}`;
 }
 
-/* 트랙 좌표계에서의 목표 지점 x (px) */
-function targetCenterX() {
-  return state.targetRatio * el.track.clientWidth;
+/* ── 골대/과자 레이아웃 (반응형 핵심) ───────
+   background-size: cover와 동일한 수식으로 배경 그림 속 골대의
+   화면 좌표를 계산해 골대 논리 영역과 과자 크기를 맞춘다.
+   리사이즈/회전 시마다 다시 호출된다. */
+function layoutGame() {
+  const W = screens.game.clientWidth;
+  const H = screens.game.clientHeight;
+  if (!W || !H) return; // 화면이 숨겨져 있으면 스킵
+
+  const scale = Math.max(W / CONFIG.BG_IMAGE_W, H / CONFIG.BG_IMAGE_H); // cover
+  const iw = CONFIG.BG_IMAGE_W * scale;
+  const ih = CONFIG.BG_IMAGE_H * scale;
+  const ox = (W - iw) / 2; // 중앙 기준 크롭 오프셋
+  const oy = (H - ih) / 2;
+
+  const r = CONFIG.BG_GOAL_RECT;
+  el.goalArea.style.left = `${ox + r.x1 * iw}px`;
+  el.goalArea.style.top = `${oy + r.y1 * ih}px`;
+  el.goalArea.style.width = `${(r.x2 - r.x1) * iw}px`;
+  el.goalArea.style.height = `${(r.y2 - r.y1) * ih}px`;
+
+  state.snackSize = (r.x2 - r.x1) * iw * CONFIG.SNACK_SIZE_RATIO;
+  el.snack.style.width = `${state.snackSize}px`;
+  el.snack.style.height = `${state.snackSize}px`;
 }
 
-/* 골존 하이라이트 + 목표 라인을 함께 이동.
-   둘 다 CSS에서 --target-shift(트랙 중앙 기준 오프셋 px)를 읽는다. */
-function applyTarget() {
-  const shift = (state.targetRatio - 0.5) * el.track.clientWidth;
-  el.gameInner.style.setProperty("--target-shift", `${shift}px`);
+/* ── 과자(타깃) 위치 ───────────────────────
+   골대 안 잔디 바닥에 서 있고, 이동은 바닥을 따라 좌우로만.
+   가로 위치는 0~1 비율(snackXR)로만 들고 px는 매번 현재 골대
+   크기에서 계산 → 리사이즈에도 상대 위치가 유지된다.
+   조준·슈팅 중에는 고정. 슛이 끝날 때마다 새 랜덤 가로 위치로
+   통통 튀며 이동한다. 순간이동 없음. */
+function snackBounds() {
+  const w = el.goalArea.clientWidth;
+  const h = el.goalArea.clientHeight;
+  const half = state.snackSize / 2;
+  const ix = w * CONFIG.SNACK_AREA_INSET_X + half;
+  return {
+    minX: ix,
+    maxX: Math.max(ix, w - ix),
+    groundY: h - half - h * CONFIG.SNACK_GROUND_OFFSET_RATIO, // 발이 골대 하단에 닿는 중심 y
+  };
 }
 
-/* ── 게임 시작: 카운트다운 → 공 이동 ─────── */
+/* 과자 중심의 골대 영역 내 px 좌표 (항상 현재 크기 기준으로 계산) */
+function snackPx() {
+  const b = snackBounds();
+  return { x: b.minX + state.snackXR * (b.maxX - b.minX), y: b.groundY };
+}
+
+function randomSnackXR() {
+  let r = state.snackXR;
+  for (let i = 0; i < 8; i++) {
+    r = Math.random();
+    if (Math.abs(r - state.snackXR) >= CONFIG.SNACK_MIN_JUMP_RATIO) break;
+  }
+  return r;
+}
+
+/* 게임 시작: 첫 위치도 랜덤 (등장은 즉시 배치) */
+function resetSnack() {
+  state.snackHop = null;
+  state.snackXR = Math.random();
+  placeSnack();
+}
+
+/* 새 랜덤 위치로 부드럽게 미끄러지듯 이동 시작 */
+function hopSnack() {
+  state.snackHop = {
+    fromXR: state.snackXR,
+    toXR: randomSnackXR(),
+    start: performance.now(),
+  };
+}
+
+function updateSnackHop(now) {
+  const hop = state.snackHop;
+  if (!hop) return;
+  const p = Math.min((now - hop.start) / CONFIG.SNACK_MOVE_MS, 1);
+  const e = 1 - Math.pow(1 - p, 3); // ease-out: 감속하며 스르륵 도착
+  state.snackXR = hop.fromXR + (hop.toXR - hop.fromXR) * e;
+  placeSnack();
+  if (p >= 1) {
+    state.snackHop = null;
+    placeSnack();
+  }
+}
+
+function placeSnack() {
+  const p = snackPx();
+  el.snack.style.transform =
+    `translate(${p.x}px, ${p.y}px) translate(-50%, -50%)`;
+}
+
+/* ── 게임 시작 ───────────────────────────── */
 function startGame() {
-  stopBall();
+  stopLoop();
   showScreen("game");
   state.phase = "countdown";
-  el.btnTap.disabled = true;
-  el.gameRoni.classList.remove("is-kicking");
+  state.score = 0;
+  state.hits = 0;
+  state.shotsLeft = CONFIG.SHOTS_PER_GAME;
+  state.fly = null;
+  renderHud();
   el.judgeFlash.classList.add("hidden");
-  resetKickBall();
-
-  // 목표 지점 랜덤화 — 카운트다운 전에 적용해서 어디를 노릴지 미리 보이게 한다
-  pickTarget();
-  applyTarget();
-
-  // 공을 좌측 끝에서 대기
-  state.ballX = 0;
-  state.direction = 1;
-  placeBall();
+  el.flyBall.classList.add("hidden");
+  el.shootBall.style.visibility = "";
+  el.goalNetFx.classList.remove("is-shaking");
+  layoutGame();  // 골대·과자 크기를 현재 화면에 맞춤
+  resetSnack();  // 첫 위치 랜덤
+  startLoop();
 
   let n = CONFIG.COUNTDOWN_FROM;
   el.countdown.classList.remove("hidden");
-
   const tick = () => {
     if (n > 0) {
       el.countdownNum.textContent = n;
-      // 애니메이션 재시작
       el.countdownNum.style.animation = "none";
       void el.countdownNum.offsetWidth;
       el.countdownNum.style.animation = "";
@@ -167,189 +294,257 @@ function startGame() {
       setTimeout(tick, 850);
     } else {
       el.countdown.classList.add("hidden");
-      beginPlay();
+      beginAim();
     }
   };
   tick();
 }
 
-function beginPlay() {
-  state.phase = "playing";
-  el.btnTap.disabled = false;
-  state.lastTime = null;
-  state.rafId = requestAnimationFrame(moveBall);
+/* ── 1단계: 드래그 조준 ──────────────────── */
+function beginAim() {
+  state.phase = "aim";        // 공 터치 대기
+  state.aimAngle = 0;
+  state.aimPointerId = null;
+  el.shootBall.style.visibility = "";
+  el.flyBall.classList.add("hidden");
+  el.aimArrow.classList.add("hidden");
+  el.powerWrap.classList.remove("is-active");
+  state.power = 0;
+  state.powerDir = 1;
+  placePowerCursor();
+  el.phaseHint.textContent = "공을 잡고 조준하세요!";
 }
 
-/* ── 공 이동 (requestAnimationFrame, PRD 5.1) ── */
-function trackMetrics() {
-  const w = el.track.clientWidth;
-  const ballW = el.ball.clientWidth || 44;
-  const margin = ballW / 2 + 4; // 공이 트랙 밖으로 나가지 않도록
-  return { w, min: margin, max: w - margin };
+function ballCenter() {
+  const b = el.shootBall.getBoundingClientRect();
+  return { x: b.left + b.width / 2, y: b.top + b.height / 2, r: b.width / 2 };
 }
 
-function moveBall(t) {
-  if (state.phase !== "playing") return;
-  if (state.lastTime === null) state.lastTime = t;
-  const dt = Math.min((t - state.lastTime) / 1000, 0.05); // 프레임 드랍 보호
-  state.lastTime = t;
-
-  const { w, min, max } = trackMetrics();
-  const speed = w * CONFIG.BALL_SPEED_RATIO; // px/초
-
-  state.ballX += state.direction * speed * dt;
-  if (state.ballX >= max) { state.ballX = max; state.direction = -1; }
-  if (state.ballX <= min) { state.ballX = min; state.direction = 1; }
-
-  placeBall();
-  state.rafId = requestAnimationFrame(moveBall);
+/* 손가락(포인터) 위치를 향해 화살표 회전 · 각도는 좌우 제한 */
+function aimTowardPointer(e) {
+  const c = ballCenter();
+  const dx = e.clientX - c.x;
+  const dy = c.y - e.clientY;                 // 위쪽이 +
+  // 포인터가 공보다 아래면 dy를 최소 1로 눌러 각도 폭주 방지
+  let deg = (Math.atan2(dx, Math.max(dy, 1)) * 180) / Math.PI;
+  deg = Math.min(Math.max(deg, -CONFIG.AIM_MAX_ANGLE), CONFIG.AIM_MAX_ANGLE);
+  state.aimAngle = deg;
+  el.aimArrow.style.transform = `translateX(-50%) rotate(${deg}deg)`;
 }
 
-function placeBall() {
-  el.ball.style.transform = `translate(${state.ballX}px, -50%) translateX(-50%)`;
+/* ── 2단계: 파워 ─────────────────────────── */
+function beginPower() {
+  state.phase = "power";
+  state.power = 0;
+  state.powerDir = 1;
+  el.powerWrap.classList.add("is-active");
+  el.phaseHint.textContent = "탭해서 파워를 정해요!";
 }
 
-function stopBall() {
-  if (state.rafId) cancelAnimationFrame(state.rafId);
-  state.rafId = null;
+function updatePower(dt) {
+  state.power += state.powerDir * CONFIG.POWER_SWEEP_SPEED * dt;
+  if (state.power >= 1) { state.power = 1; state.powerDir = -1; }
+  if (state.power <= 0) { state.power = 0; state.powerDir = 1; }
+  placePowerCursor();
 }
 
-/* ── 슛 연출: 트랙의 공 → 골대로 포물선 비행 ── */
-function ensureKickBall() {
-  if (el.kickBall) return el.kickBall;
-  const img = document.createElement("img");
-  img.src = "assets/images/ball.png";
-  img.alt = "";
-  img.draggable = false;
-  img.className = "kick-ball hidden";
-  el.gameInner.appendChild(img);
-  el.kickBall = img;
-  return img;
+function placePowerCursor() {
+  el.powerCursor.style.left = `${state.power * 100}%`;
 }
 
-function resetKickBall() {
-  if (el.kickBall) el.kickBall.classList.add("hidden");
-  el.ball.style.visibility = "";
-  el.goalNet.classList.remove("is-shaking");
-}
+/* ── 슛: 방향+파워로 착지점 계산 ───────────
+   좌표계는 .game-inner 기준 px.
+   파워 구간: < GOAL_MIN 못 미침 / GOAL_MIN~GOAL_MAX 골대 도달 / > GOAL_MAX 넘어감 */
+function computeShot(angleDeg, power) {
+  const origin = el.gameInner.getBoundingClientRect();
+  const g = el.goalArea.getBoundingClientRect();
+  const b = el.shootBall.getBoundingClientRect();
 
-/* 등급 + 탭한 방향으로 착지 지점 결정 (좌표는 .game-inner 기준) */
-function kickTarget(grade, side, origin) {
-  const g = el.goal.getBoundingClientRect();
-  const cx = g.left + g.width / 2 - origin.left;
-  const top = g.top - origin.top;
+  const from = { x: b.left + b.width / 2 - origin.left, y: b.top + b.height / 2 - origin.top };
+  const goal = {
+    left: g.left - origin.left,
+    top: g.top - origin.top,
+    width: g.width,
+    height: g.height,
+  };
+  goal.bottom = goal.top + goal.height;
 
-  if (grade.key === "perfect") {
-    return { x: cx, y: top + g.height * 0.55, fade: false };
-  }
-  if (grade.key === "good") {
-    return { x: cx + side * g.width * CONFIG.KICK_GOOD_SPREAD, y: top + g.height * 0.45, fade: false };
-  }
-  // 헛발질: 골대를 빗나가 밖으로
-  return { x: cx + side * g.width * CONFIG.KICK_MISS_SPREAD, y: top - CONFIG.KICK_MISS_RISE, fade: true };
-}
+  const a = angleDeg / CONFIG.AIM_MAX_ANGLE;                     // -1 ~ 1
+  const spread = (goal.width / 2) * CONFIG.AIM_SPREAD_RATIO;     // 최대각 수평 도달 거리
+  const arcH = origin.height * CONFIG.FLY_ARC_RATIO;             // 연출 거리는 화면 높이 비례
 
-function flyBall(grade, side) {
-  return new Promise((resolve) => {
-    const ball = ensureKickBall();
-    const origin = el.gameInner.getBoundingClientRect();
-    const b = el.ball.getBoundingClientRect();
-    const from = { x: b.left + b.width / 2 - origin.left, y: b.top + b.height / 2 - origin.top };
-    const to = kickTarget(grade, side, origin);
-
-    // 트랙의 공은 숨기고 같은 자리에서 연출용 공이 이어받음
-    el.ball.style.visibility = "hidden";
-    ball.classList.remove("hidden");
-
-    const dur = CONFIG.KICK_DURATION_MS;
-    const start = performance.now();
-
-    const step = (now) => {
-      const p = Math.min((now - start) / dur, 1);
-      const e = 1 - Math.pow(1 - p, 2);            // 수평은 살짝 감속
-      const x = from.x + (to.x - from.x) * e;
-      const y = from.y + (to.y - from.y) * e - CONFIG.KICK_ARC_HEIGHT * Math.sin(Math.PI * e);
-      const scale = 1 + (CONFIG.KICK_END_SCALE - 1) * e;
-      const rot = CONFIG.KICK_SPIN_TURNS * 360 * p;
-
-      ball.style.transform =
-        `translate(${x}px, ${y}px) translate(-50%, -50%) rotate(${rot}deg) scale(${scale})`;
-      ball.style.opacity = to.fade ? String(Math.min(1, (1 - p) / 0.3)) : "1";
-
-      if (p < 1) requestAnimationFrame(step);
-      else resolve();
+  if (power < CONFIG.POWER_GOAL_MIN) {
+    // 파워 부족: 골대 앞에 뚝 떨어짐
+    const t = power / CONFIG.POWER_GOAL_MIN; // 0~1
+    const shortMargin = origin.height * CONFIG.SHORT_LAND_MARGIN_RATIO;
+    return {
+      outcome: "short",
+      from,
+      to: {
+        x: from.x + a * spread * (0.3 + 0.7 * t),
+        y: from.y - (from.y - (goal.bottom + shortMargin)) * (0.35 + 0.65 * t),
+      },
+      endScale: 1 + (CONFIG.FLY_END_SCALE - 1) * (0.35 + 0.65 * t),
+      arc: arcH * (0.35 + 0.45 * t),
+      fade: false,
     };
-    requestAnimationFrame(step);
-  });
+  }
+
+  if (power > CONFIG.POWER_GOAL_MAX) {
+    // 파워 초과: 골대 위로 넘어감
+    const o = (power - CONFIG.POWER_GOAL_MAX) / (1 - CONFIG.POWER_GOAL_MAX); // 0~1
+    const rise = origin.height * CONFIG.OVER_RISE_RATIO;
+    return {
+      outcome: "over",
+      from,
+      to: { x: from.x + a * spread, y: goal.top - rise * (0.4 + 0.6 * o) },
+      endScale: CONFIG.FLY_END_SCALE,
+      arc: arcH * 1.15,
+      fade: true,
+    };
+  }
+
+  // 적정 파워: 골대 평면 도달. 파워가 셀수록 골대 안 높은 곳에 꽂힌다.
+  const h = (power - CONFIG.POWER_GOAL_MIN) / (CONFIG.POWER_GOAL_MAX - CONFIG.POWER_GOAL_MIN); // 0~1
+  return {
+    outcome: "reach",
+    from,
+    to: {
+      x: from.x + a * spread,
+      y: goal.bottom - h * goal.height,
+    },
+    endScale: CONFIG.FLY_END_SCALE,
+    arc: arcH,
+    fade: false,
+    goal,
+  };
 }
 
-/* ── 판정 (PRD 5.2 공식) ─────────────────── */
-function judge() {
-  if (state.phase !== "playing") return;
-  state.phase = "judged";                 // 연출 중 추가 탭 무시
-  stopBall();
-  el.btnTap.disabled = true;
+function shoot() {
+  const shot = computeShot(state.aimAngle, state.power);
+  state.phase = "fly";
+  state.fly = { ...shot, start: performance.now() };
+  el.aimArrow.classList.add("hidden");
+  el.phaseHint.textContent = "";
 
-  // 정확도는 반드시 "탭한 순간"의 공 위치로 계산 (연출과 무관)
-  // 기준은 트랙 중앙이 아니라 이번 판의 랜덤 목표 지점.
-  // maxDist = 목표 지점에서 트랙 양 끝 중 "먼 쪽"까지 → 목표가 어디에 있든 0~100% 스케일 유지.
-  const trackWidth = el.track.clientWidth;
-  const targetX = targetCenterX();
-  const maxDist = Math.max(targetX, trackWidth - targetX);
-  const distance = Math.abs(state.ballX - targetX);
-  const accuracy = Math.max(0, Math.round(100 - (distance / maxDist) * 100));
+  // 발사 위치에서 비행용 공으로 교체
+  el.shootBall.style.visibility = "hidden";
+  el.flyBall.classList.remove("hidden");
+  el.flyBall.style.opacity = "1";
+}
 
-  const grade = CONFIG.GRADES.find((g) => accuracy >= g.min);
+function updateFly(now) {
+  const f = state.fly;
+  const p = Math.min((now - f.start) / CONFIG.FLY_DURATION_MS, 1);
+  const e = 1 - Math.pow(1 - p, 2); // 수평 감속
+  const x = f.from.x + (f.to.x - f.from.x) * e;
+  const y = f.from.y + (f.to.y - f.from.y) * e - f.arc * Math.sin(Math.PI * e);
+  const scale = 1 + (f.endScale - 1) * e;
+  const rot = CONFIG.FLY_SPIN_TURNS * 360 * p;
+
+  el.flyBall.style.transform =
+    `translate(${x}px, ${y}px) translate(-50%, -50%) rotate(${rot}deg) scale(${scale})`;
+  if (f.fade) el.flyBall.style.opacity = String(Math.max(0, 1 - Math.max(0, p - 0.7) / 0.3));
+
+  if (p >= 1) resolveShot();
+}
+
+/* ── 판정: 도착 순간의 과자 위치와 비교 ──── */
+function resolveShot() {
+  const f = state.fly;
+  state.fly = null;
+  state.phase = "wait";
+  state.shotsLeft -= 1;
+
+  let hit = false;
+  if (f.outcome === "reach") {
+    // 과자 중심의 .game-inner 기준 좌표 (도착한 "그 순간" 위치)
+    const sp = snackPx();
+    const snackX = f.goal.left + sp.x;
+    const snackY = f.goal.top + sp.y;
+    const dist = Math.hypot(f.to.x - snackX, f.to.y - snackY);
+    hit = dist <= state.snackSize * CONFIG.HIT_RADIUS_RATIO; // 과자 크기 비례 → 화면 무관 동일 난이도
+  }
+
+  if (hit) {
+    state.hits += 1;
+    state.score += CONFIG.SCORE_PER_HIT;
+    el.flyBall.classList.add("hidden");
+    // 점수 팝업 (과자 현재 위치 위에)
+    const sp = snackPx();
+    el.hitPopup.style.left = `${sp.x}px`;
+    el.hitPopup.style.top = `${sp.y - state.snackSize * 0.8}px`;
+    el.hitPopup.classList.remove("hidden");
+    el.hitPopup.style.animation = "none";
+    void el.hitPopup.offsetWidth;
+    el.hitPopup.style.animation = "";
+    el.goalNetFx.classList.remove("is-shaking");
+    void el.goalNetFx.offsetWidth;
+    el.goalNetFx.classList.add("is-shaking");
+  } else {
+    if (f.outcome === "reach") {
+      // 골대엔 들어갔지만 과자를 빗나감 → 골망만 출렁
+      el.goalNetFx.classList.remove("is-shaking");
+      void el.goalNetFx.offsetWidth;
+      el.goalNetFx.classList.add("is-shaking");
+    }
+    if (f.outcome !== "over") {
+      setTimeout(() => el.flyBall.classList.add("hidden"), 250);
+    } else {
+      el.flyBall.classList.add("hidden");
+    }
+  }
+  renderHud();
+
+  el.phaseHint.textContent = hit ? "🎯 명중! +100" :
+    f.outcome === "short" ? "파워가 부족했어요…" :
+    f.outcome === "over" ? "너무 세게 찼어요!" : "과자를 빗나갔어요!";
+
+  if (state.shotsLeft > 0) {
+    // 판정 리액션이 살짝 보인 뒤, 과자가 새 랜덤 위치로 스르륵 이동
+    setTimeout(hopSnack, hit ? 420 : 180);
+    setTimeout(() => {
+      el.hitPopup.classList.add("hidden");
+      beginAim();
+    }, CONFIG.NEXT_SHOT_DELAY_MS);
+  } else {
+    setTimeout(finishGame, CONFIG.RESULT_DELAY_MS);
+  }
+}
+
+/* ── 게임 종료 → 결과 ────────────────────── */
+function finishGame() {
+  const grade = CONFIG.GRADES.find((g) => state.hits >= g.minHits);
   const prevBest = loadBest();
-  const isNewRecord = prevBest === null || accuracy > prevBest;
-  if (isNewRecord) saveBest(accuracy);
-
-  state.lastResult = { accuracy, grade, isNewRecord };
-
-  // 로니 킥 모션 + 공 비행을 같은 타이밍에 시작
-  const side = state.ballX < targetX ? -1 : 1;
-  el.gameRoni.classList.add("is-kicking");
-
-  flyBall(grade, side).then(() => {
-    if (grade.key === "perfect") el.goalNet.classList.add("is-shaking");
-
-    el.judgeFlash.textContent = grade.label;
-    el.judgeFlash.classList.remove("hidden");
-    el.judgeFlash.style.animation = "none";
-    void el.judgeFlash.offsetWidth;
-    el.judgeFlash.style.animation = "";
-
-    setTimeout(renderResult, CONFIG.RESULT_DELAY_MS);
-  });
+  const isNewRecord = prevBest === null || state.score > prevBest;
+  if (isNewRecord) saveBest(state.score);
+  state.lastResult = { score: state.score, hits: state.hits, grade, isNewRecord };
+  renderResult();
 }
 
-/* ── 결과 화면 ───────────────────────────── */
 function renderResult() {
-  const { accuracy, grade, isNewRecord } = state.lastResult;
+  const { score, hits, grade, isNewRecord } = state.lastResult;
+  stopLoop();
   state.phase = "result";
+  el.hitPopup.classList.add("hidden");
 
+  el.resultHits.textContent = `🎯 명중 ${hits} / ${CONFIG.SHOTS_PER_GAME}`;
   el.resultGrade.textContent = grade.label;
   el.resultGrade.className = `result-grade grade-${grade.key}`;
   el.resultRoni.className = `result-roni pose-${grade.key}`;
   el.resultEmote.textContent = grade.emote;
   el.resultComment.textContent = grade.comment;
-  el.resultBestValue.textContent = `${loadBest() ?? accuracy}%`;
+  el.resultBestValue.textContent = `${loadBest() ?? score}점`;
   el.newRecordBadge.classList.toggle("hidden", !isNewRecord);
 
   showScreen("result");
 
-  // 숫자 카운트업
+  const maxScore = CONFIG.SHOTS_PER_GAME * CONFIG.SCORE_PER_HIT;
   el.accuracyFill.style.width = "0%";
-  animateNumber(el.resultNumber, accuracy, 700);
-  requestAnimationFrame(() => { el.accuracyFill.style.width = `${accuracy}%`; });
+  animateNumber(el.resultNumber, score, 700);
+  requestAnimationFrame(() => { el.accuracyFill.style.width = `${(score / maxScore) * 100}%`; });
 
   if (grade.key === "perfect") spawnConfetti();
-
-  // 입력 잠금 해제 (PRD 4.2)
-  el.btnRetry.disabled = true;
-  setTimeout(() => {
-    el.btnRetry.disabled = false;
-  }, Math.max(0, CONFIG.INPUT_LOCK_MS - CONFIG.RESULT_DELAY_MS));
 }
 
 function animateNumber(node, target, duration) {
@@ -378,26 +573,83 @@ function spawnConfetti() {
   }
 }
 
+/* ── 메인 루프 ───────────────────────────── */
+function loop(now) {
+  if (state.lastTime === null) state.lastTime = now;
+  const dt = Math.min((now - state.lastTime) / 1000, 0.05); // 프레임 드랍 보호
+  state.lastTime = now;
+
+  updateSnackHop(now); // 슛 사이 이동 중일 때만 실제로 움직인다
+
+  if (state.phase === "power") updatePower(dt);
+  else if (state.phase === "fly") updateFly(now);
+
+  state.rafId = requestAnimationFrame(loop);
+}
+
+function startLoop() {
+  stopLoop();
+  state.lastTime = null;
+  state.rafId = requestAnimationFrame(loop);
+}
+function stopLoop() {
+  if (state.rafId) cancelAnimationFrame(state.rafId);
+  state.rafId = null;
+}
+
+/* ── 입력 (pointer 이벤트 · 마우스/터치 공용) ──
+   조준: 공을 잡고(pointerdown) 드래그(pointermove) → 떼면(pointerup) 방향 고정
+   파워: 화면 아무 데나 탭하면 슈팅 */
+function onPointerDown(e) {
+  e.preventDefault();
+  if (state.phase === "aim") {
+    const c = ballCenter();
+    if (Math.hypot(e.clientX - c.x, e.clientY - c.y) <= c.r * CONFIG.BALL_GRAB_RADIUS) {
+      state.phase = "aiming";
+      state.aimPointerId = e.pointerId;
+      el.aimArrow.classList.remove("hidden");
+      aimTowardPointer(e);
+      el.phaseHint.textContent = "놓으면 방향이 고정돼요!";
+      try { screens.game.setPointerCapture(e.pointerId); } catch (_) { /* 합성 이벤트 등 */ }
+    }
+  } else if (state.phase === "power") {
+    shoot();
+  }
+}
+
+function onPointerMove(e) {
+  if (state.phase !== "aiming" || e.pointerId !== state.aimPointerId) return;
+  e.preventDefault();
+  aimTowardPointer(e);
+}
+
+function onPointerUp(e) {
+  if (state.phase !== "aiming" || e.pointerId !== state.aimPointerId) return;
+  e.preventDefault();
+  state.aimPointerId = null;
+  beginPower(); // 화살표는 고정된 방향 그대로 보여준다
+}
+
+function onPointerCancel(e) {
+  if (state.phase !== "aiming" || e.pointerId !== state.aimPointerId) return;
+  beginAim(); // 조준 취소 → 다시 공 터치 대기
+}
+
+screens.game.addEventListener("pointerdown", onPointerDown);
+screens.game.addEventListener("pointermove", onPointerMove);
+screens.game.addEventListener("pointerup", onPointerUp);
+screens.game.addEventListener("pointercancel", onPointerCancel);
+
 /* ── 이벤트 바인딩 ───────────────────────── */
 el.btnStart.addEventListener("click", startGame);
 el.btnRetry.addEventListener("click", startGame);
 
-// 탭 판정: 버튼 + 게임 화면 전체 (PRD 4.2 "화면 전체 또는 하단 큰 버튼")
-el.btnTap.addEventListener("pointerdown", (e) => { e.preventDefault(); judge(); });
-screens.game.addEventListener("pointerdown", (e) => {
-  if (e.target.closest("#btn-tap")) return; // 버튼은 위에서 처리
-  judge();
-});
-
-// 화면 회전/리사이즈 시 타깃(비율 기준) 재배치 + 공 위치 보정
+// 리사이즈/회전: 골대·과자 레이아웃 재계산.
+// 과자 가로 위치는 비율(snackXR)로 저장돼 있어 자동으로 새 크기에 맞는다.
 window.addEventListener("resize", () => {
   if (state.phase === "landing" || state.phase === "result") return;
-  applyTarget();
-  if (state.phase === "playing") {
-    const { min, max } = trackMetrics();
-    state.ballX = Math.min(Math.max(state.ballX, min), max);
-    placeBall();
-  }
+  layoutGame();
+  placeSnack();
 });
 
 /* ── 초기화 ──────────────────────────────── */

@@ -4,14 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>메론킥 슛!</title>
-  <meta name="description" content="공이 골대 중앙에 왔을 때 탭! 로니와 함께하는 원터치 킥 타이밍 게임" />
+  <meta name="description" content="방향과 파워를 맞춰 골대 안 메론킥을 맞혀라! 로니와 함께하는 슈팅 게임" />
   <meta property="og:title" content="메론킥 슛!" />
-  <meta property="og:description" content="공이 골대 중앙에 왔을 때 탭! 나의 킥 정확도는 몇 %?" />
+  <meta property="og:description" content="방향과 파워를 맞춰 메론킥을 명중시켜라! 3번의 기회, 최대 300점!" />
   <meta name="theme-color" content="#C8E86B" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link href="https://cdn.jsdelivr.net/gh/wanteddev/wanted-sans@v1.0.3/packages/wanted-sans/fonts/webfonts/variable/split/WantedSansVariable.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -23,14 +22,13 @@
       <div class="landing-deco deco-2"></div>
       <div class="landing-inner">
         <div class="landing-hero">
-          <img src="assets/images/roni.png" alt="로니" class="landing-roni" draggable="false" />
-          <img src="assets/images/ball.png" alt="" class="landing-ball" draggable="false" />
+          <img src="assets/images/roni.png?v=2" alt="로니" class="landing-roni" draggable="false" />
+          <img src="assets/images/ball.png?v=2" alt="" class="landing-ball" draggable="false" />
         </div>
-        <p class="landing-badge">메론킥 프렌즈 · 로니</p>
         <h1 class="landing-title">메론킥 슛!</h1>
-        <p class="landing-sub">공이 골대 중앙에 왔을 때 탭!</p>
+        <p class="landing-sub">방향과 파워를 맞춰 메론킥을 명중시켜라!</p>
         <p id="best-score-label" class="best-score hidden">
-          🏆 내 최고기록 <strong id="best-score-value">0%</strong>
+          🏆 내 최고기록 <strong id="best-score-value">0점</strong>
         </p>
         <button id="btn-start" class="btn btn-primary" type="button">시작하기</button>
       </div>
@@ -38,70 +36,55 @@
 
     <!-- ═══════════ 게임 화면 ═══════════ -->
     <section id="screen-game" class="screen">
-      <!-- 경기장 배경 (장식 전용 · 채도/대비를 낮춰 공과 트랙을 방해하지 않는다) -->
-      <div class="field" aria-hidden="true">
-        <div class="sky">
-          <div class="cloud cloud-1"></div>
-          <div class="cloud cloud-2"></div>
-          <div class="cloud cloud-3"></div>
-        </div>
-
-        <!-- 삼각 깃발 가랜드 -->
-        <div class="garland"></div>
-
-        <!-- 관중석 -->
-        <div class="stands">
-          <div class="stands-crowd"></div>
-          <div class="stands-board"></div>
-        </div>
-
-        <!-- 잔디 + 필드 라인 -->
-        <div class="pitch">
-          <svg class="pitch-lines" viewBox="0 0 390 320" preserveAspectRatio="none">
-            <g fill="none" stroke="#ffffff" stroke-opacity="0.42" stroke-width="3"
-               stroke-linejoin="round" vector-effect="non-scaling-stroke">
-              <!-- 골라인 -->
-              <path d="M-10 30 H400" />
-              <!-- 페널티 박스 (원근 사다리꼴) -->
-              <path d="M52 30 L338 30 L392 176 L-2 176 Z" />
-              <!-- 골 에어리어 -->
-              <path d="M142 30 L248 30 L259 84 L131 84 Z" />
-              <!-- 페널티 아크 -->
-              <path d="M143 176 Q195 224 247 176" />
-              <!-- 사이드라인 -->
-              <path d="M-24 320 L18 30" />
-              <path d="M414 320 L372 30" />
-            </g>
-            <circle cx="195" cy="132" r="3.5" fill="#ffffff" fill-opacity="0.42" />
-          </svg>
-        </div>
-      </div>
-
+      <!-- 배경(assets/images/bg.png)은 CSS background-image로 적용 -->
       <div class="game-inner">
-        <!-- 골대 -->
-        <div class="goal">
-          <div class="goal-net"></div>
-          <div class="goal-frame"></div>
+        <!-- 상단 HUD -->
+        <div class="hud">
+          <div class="hud-chip hud-score">점수 <strong id="hud-score">0</strong></div>
+          <div class="hud-chip hud-shots">남은 기회 <strong id="hud-shots">x3</strong></div>
         </div>
 
-        <!-- 트랙 -->
-        <div class="track-wrap">
-          <div id="track" class="track">
-            <div class="goal-zone"></div>
-            <div class="goal-zone-center"></div>
-            <img id="ball" src="assets/images/ball.png" alt="공" class="ball" draggable="false" />
+        <!-- 골대 영역 (배경 이미지의 골대 위치에 맞춘 논리 영역) -->
+        <div id="goal-area" class="goal-area">
+          <div id="goal-net-fx" class="goal-net-fx" aria-hidden="true"></div>
+          <div id="snack" class="snack">
+            <img id="snack-img" src="assets/images/melonkick.png" alt="메론킥 과자" draggable="false" />
           </div>
-          <div class="track-hint"><span>◀</span> 목표 라인에서 탭! <span>▶</span></div>
+          <div id="hit-popup" class="hit-popup hidden">+100</div>
         </div>
 
-        <!-- 로니 -->
-        <div class="game-roni-wrap">
-          <img id="game-roni" src="assets/images/roni.png" alt="로니" class="game-roni" draggable="false" />
+        <!-- 하단 슈팅 존: 공 + 조준 화살표 -->
+        <div class="shoot-zone">
+          <div class="ball-wrap">
+            <div id="aim-arrow" class="aim-arrow hidden" aria-hidden="true">
+              <svg viewBox="0 0 40 120" width="40" height="120">
+                <defs>
+                  <linearGradient id="arrow-grad" x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stop-color="#ff9a3c" stop-opacity="0.25" />
+                    <stop offset="100%" stop-color="#ef5b25" stop-opacity="0.95" />
+                  </linearGradient>
+                </defs>
+                <path d="M20 4 L34 34 L25 30 L25 116 L15 116 L15 30 L6 34 Z"
+                      fill="url(#arrow-grad)" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <img id="shoot-ball" src="assets/images/ball.png?v=2" alt="공" class="shoot-ball" draggable="false" />
+          </div>
         </div>
 
-        <button id="btn-tap" class="btn-tap" type="button">
-          <span class="btn-tap-label">TAP!</span>
-        </button>
+        <!-- 비행용 공 (.game-inner 기준 좌표 · JS가 transform 제어) -->
+        <img id="fly-ball" src="assets/images/ball.png?v=2" alt="" class="fly-ball hidden" draggable="false" />
+
+        <!-- 파워 게이지 -->
+        <div class="power-wrap">
+          <span class="power-label">파워</span>
+          <div class="power-bar">
+            <div class="power-track"></div>
+            <div id="power-cursor" class="power-cursor"></div>
+          </div>
+        </div>
+
+        <p id="phase-hint" class="phase-hint">탭해서 방향을 정해요!</p>
       </div>
 
       <!-- 카운트다운 오버레이 -->
@@ -119,22 +102,29 @@
       <div class="result-inner">
         <p id="new-record-badge" class="new-record hidden">🎉 최고기록 갱신!</p>
         <div class="result-card">
-          <p class="result-card-title">나의 킥 정확도</p>
-          <p class="result-accuracy"><span id="result-number">0</span><em>%</em></p>
+          <p class="result-card-title">나의 슈팅 점수</p>
+          <p class="result-accuracy"><span id="result-number">0</span><em>점</em></p>
           <div class="accuracy-bar"><div id="accuracy-fill" class="accuracy-fill"></div></div>
-          <p id="result-grade" class="result-grade">퍼펙트킥!</p>
+          <p id="result-hits" class="result-hits">🎯 명중 0 / 3</p>
+          <p id="result-grade" class="result-grade">퍼펙트!</p>
           <div class="result-roni-wrap">
-            <img id="result-roni" src="assets/images/roni.png" alt="로니" class="result-roni" draggable="false" />
+            <img id="result-roni" src="assets/images/roni.png?v=2" alt="로니" class="result-roni" draggable="false" />
             <span id="result-emote" class="result-emote"></span>
           </div>
           <p id="result-comment" class="result-comment"></p>
-          <p class="result-best">내 최고기록 <strong id="result-best-value">0%</strong></p>
+          <p class="result-best">내 최고기록 <strong id="result-best-value">0점</strong></p>
         </div>
         <div class="result-actions">
           <button id="btn-retry" class="btn btn-primary" type="button">다시하기</button>
         </div>
       </div>
     </section>
+
+    <!-- 가로 모드 안내 (게임은 세로 전용) -->
+    <div class="rotate-overlay" aria-hidden="true">
+      <span class="rotate-icon">📱</span>
+      <p>세로 화면으로 돌려주세요</p>
+    </div>
 
   </div>
 

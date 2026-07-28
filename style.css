@@ -35,8 +35,13 @@
   --radius-lg: 28px;
   --radius-md: 18px;
   --shadow-card: 0 18px 40px -18px rgba(31, 63, 20, 0.5);
-  --font-display: "Jua", sans-serif;
-  --font-body: "Gowun Dodum", sans-serif;
+
+  /* ── 폰트: Wanted Sans (CDN 실패 시 시스템 폰트 폴백) ──
+     Jua 같은 디스플레이 폰트가 아니므로 위계는 굵기로 잡는다:
+     타이틀/점수/등급 800~900 · 버튼/배지 700 · 본문/안내 500~600 */
+  --font-stack: "Wanted Sans Variable", "Wanted Sans", system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-display: var(--font-stack);
+  --font-body: var(--font-stack);
 
   /* 패키지 로고용 흰 외곽선 — 16방향 text-shadow.
      -webkit-text-stroke는 Chrome에서 글자 단위로 stroke→fill 순서를 반복해
@@ -65,6 +70,7 @@ html, body {
 
 body {
   font-family: var(--font-body);
+  font-weight: 500;
   color: var(--ink);
   background: var(--melon-300);
   -webkit-tap-highlight-color: transparent;
@@ -73,11 +79,15 @@ body {
   touch-action: manipulation;
 }
 
-/* 데스크톱: 모바일 프레임 중앙 정렬 */
+/* ── 반응형 프레임 ─────────────────────────
+   모바일(~480px): 화면 전체 사용. 요소는 % / clamp() → 폭에 비례.
+   태블릿(481~900px): 모바일 레이아웃을 480px 프레임으로 키워 중앙 배치.
+   데스크톱(900px~): 같은 프레임, 바깥은 배경 톤으로 채움.
+   높이는 100dvh(iOS 주소창 대응), 노치/홈바는 safe-area-inset. */
 #app {
   position: relative;
   width: 100%;
-  max-width: 430px;
+  max-width: 480px;
   height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
@@ -85,15 +95,46 @@ body {
   box-shadow: 0 0 60px rgba(31, 63, 20, 0.3);
 }
 
-@media (min-width: 500px) {
+@media (min-width: 481px) {
   body {
-    background:
-      radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.45), transparent 42%),
-      linear-gradient(160deg, var(--melon-300) 0%, var(--melon-600) 100%);
+    /* 프레임 바깥: 배경 일러스트에서 뽑은 부드러운 톤 */
+    background: linear-gradient(165deg, #dcf0a9 0%, #a8cf78 55%, #93c063 100%);
     display: flex;
     align-items: center;
+    justify-content: center;
   }
-  #app { height: min(100dvh, 900px); border-radius: 0; }
+  #app { height: min(100dvh, 960px); }
+}
+
+/* ── 가로 모드 차단 (게임은 세로 전용) ── */
+.rotate-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 99;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: #93c063;
+  color: var(--white);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(18px, 3.2vh, 24px);
+  text-shadow: 0 2px 0 rgba(31, 63, 20, 0.45);
+  text-align: center;
+}
+.rotate-overlay .rotate-icon {
+  font-size: clamp(40px, 9vh, 64px);
+  animation: rotate-wiggle 1.6s ease-in-out infinite;
+}
+@keyframes rotate-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(90deg); }
+}
+/* 휴대폰 가로 모드(높이가 짧은 가로 화면)에서만 표시 */
+@media (orientation: landscape) and (max-height: 600px) {
+  .rotate-overlay { display: flex; }
 }
 
 /* ── 화면 전환 ─────────────────────────── */
@@ -116,15 +157,14 @@ body {
 
 .hidden { display: none !important; }
 
-/* ── 멜론 그물망 오버레이 (랜딩 / 결과) ─── */
+/* ── 랜딩/결과: 배경 일러스트 위 반투명 밝은 오버레이 ──
+   글자가 많은 화면이라 가독성 확보용. 배경 그림이 은은하게 비친다. */
 #screen-landing::before,
 #screen-result::before {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: var(--net-tile);
-  background-size: 140px 140px;
-  opacity: 0.22;              /* 크림 선 ≈12%, 그린 선 ≈6% */
+  background: rgba(255, 252, 240, 0.76);
   pointer-events: none;
 }
 
@@ -132,6 +172,7 @@ body {
 .btn {
   position: relative;
   font-family: var(--font-display);
+  font-weight: 700;
   border: none;
   cursor: pointer;
   border-radius: 999px;
@@ -140,57 +181,35 @@ body {
 }
 .btn:active { transform: translateY(2px) scale(0.98); }
 
-/* 캔디 광택 */
-.btn::after {
-  content: "";
-  position: absolute;
-  left: 6%;
-  right: 6%;
-  top: 5px;
-  height: 38%;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
-  pointer-events: none;
-}
-
+/* 스티커 버튼 — 그림책에 붙인 스티커 느낌: 두툼한 흰 테두리 + 부드러운 그림자 */
 .btn-primary {
-  padding: 18px 30px;
-  font-size: 22px;
+  padding: clamp(14px, 2.4dvh, 19px) 30px;
+  font-size: clamp(18px, 5.4vw, 23px);
   letter-spacing: 0.06em;
   color: var(--white);
-  background: linear-gradient(180deg, var(--orange) 0%, var(--orange-deep) 100%);
-  border: 4px solid var(--white);
+  background: #f5934d;                 /* 배경 꽃/지붕에서 뽑은 웜 오렌지 */
+  border: 5px solid var(--white);
   box-shadow:
-    0 6px 0 var(--orange-shadow),
-    0 16px 26px -10px rgba(191, 65, 20, 0.55),
-    0 0 0 3px rgba(47, 92, 30, 0.14);
-  text-shadow: 0 2px 0 rgba(120, 40, 8, 0.28);
+    0 4px 0 #c9793c,
+    0 12px 22px -10px rgba(90, 60, 25, 0.45);
+  text-shadow: 0 2px 0 rgba(120, 60, 15, 0.25);
 }
 .btn-primary:active {
   box-shadow:
-    0 3px 0 var(--orange-shadow),
-    0 8px 16px -8px rgba(191, 65, 20, 0.5),
-    0 0 0 3px rgba(47, 92, 30, 0.14);
+    0 2px 0 #c9793c,
+    0 8px 14px -8px rgba(90, 60, 25, 0.4);
 }
 
 /* ═══════════════════════════════════════════
    1. 랜딩 화면
    ═══════════════════════════════════════════ */
 #screen-landing {
-  background:
-    radial-gradient(circle at 85% 6%, rgba(255, 255, 255, 0.8), transparent 34%),
-    linear-gradient(175deg, var(--melon-200) 0%, var(--melon-300) 52%, var(--melon-400) 100%);
+  background: url("assets/images/bg.png") center / cover no-repeat;
   align-items: center;
   justify-content: center;
 }
 
-.landing-deco {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 246, 216, 0.55);
-}
-.deco-1 { width: 220px; height: 220px; top: -70px; left: -70px; }
-.deco-2 { width: 150px; height: 150px; bottom: -40px; right: -40px; background: rgba(78, 143, 47, 0.2); }
+.landing-deco { display: none; } /* 배경 일러스트로 대체 */
 
 .landing-inner {
   position: relative;
@@ -215,28 +234,20 @@ body {
 .landing-roni {
   position: relative;
   z-index: 1;
-  width: 158px;
+  width: clamp(110px, 40vw, 180px);
+  max-width: 100%;
   height: auto;
   filter: drop-shadow(0 14px 18px rgba(31, 63, 20, 0.3));
 }
-/* 공: ball.png의 흰 패널이 반투명하게 저장돼 있어 배경이 비쳐 보였다.
-   에셋 알파를 불투명하게 고친 뒤, 연두 배경에 묻히지 않도록
-   흰색 원형 스티커 테두리 + 진한 그림자로 분리한다. */
+/* 공: 원본 이미지 그대로 (외곽 효과 없음) · 로니의 찬 발 앞에 겹치게 배치 */
 .landing-ball {
   position: absolute;
   z-index: 2;
-  width: 62px;
-  height: 62px;             /* 원본 59×61 → 완전한 원형 스티커를 위해 정사각 */
-  left: -42px;
-  bottom: 10px;
-  opacity: 1;
-  mix-blend-mode: normal;
-  background: var(--white);
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 5px var(--white),
-    0 0 0 7px rgba(78, 143, 47, 0.35),
-    0 10px 16px -6px rgba(31, 63, 20, 0.55);
+  width: clamp(46px, 16vw, 70px);
+  height: auto;
+  aspect-ratio: 1;
+  left: -6%;
+  bottom: 2px;
   animation: ball-spin 4s linear infinite;
 }
 @keyframes ball-spin {
@@ -244,195 +255,63 @@ body {
   to   { transform: rotate(360deg); }
 }
 
-/* 배지 = 패키지 씰 */
-.landing-badge {
-  font-family: var(--font-display);
-  font-size: 13px;
-  letter-spacing: 0.2em;
-  color: var(--melon-800);
-  background: linear-gradient(180deg, var(--cream-100), var(--cream));
-  border: 3px solid var(--white);
-  padding: 7px 16px 6px;
-  border-radius: 999px;
-  margin-bottom: 12px;
-  box-shadow:
-    0 0 0 2.5px var(--melon-500),
-    0 6px 12px -6px rgba(31, 63, 20, 0.45);
-}
-
 /* 타이틀 = 스낵 패키지 로고 타이포 */
 .landing-title {
   font-family: var(--font-display);
+  font-weight: 900;
   font-size: clamp(46px, 13.2vw, 66px);
   line-height: 1.28;
-  letter-spacing: 0.05em;
-  text-indent: 0.05em;      /* 자간 때문에 생기는 중앙정렬 쏠림 보정 */
+  letter-spacing: -0.02em;  /* Wanted Sans는 자간이 넓어 보여 살짝 좁힘 */
   white-space: nowrap;
-  color: var(--melon-700);
-  text-shadow:
-    var(--logo-outline),
-    0 0.14em 0 var(--melon-800),
-    0 0.19em 0 rgba(31, 63, 20, 0.45),
-    0 0.3em 0.3em rgba(31, 63, 20, 0.3);
+  color: #5d9a3c;               /* 잔디 그린 */
+  text-shadow: var(--logo-outline); /* 흰 외곽선만 유지 (입체 그림자 제거) */
   transform: rotate(-2.5deg);
-  margin: 6px 0 18px;
+  margin: 6px 0 23px;
 }
 
 .landing-sub {
-  font-size: 16px;
+  font-size: clamp(13px, 4vw, 17px);
   color: var(--melon-900);
-  background: rgba(255, 253, 244, 0.72);
-  padding: 6px 16px;
+  background: var(--white);
   border-radius: 999px;
-  margin-bottom: 20px;
+  padding: 7px 16px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 10px -4px rgba(90, 70, 30, 0.35);
 }
 
 .best-score {
   font-size: 15px;
   color: var(--ink);
-  background: var(--cream-100);
+  background: var(--white);
   border: 3px solid var(--white);
   border-radius: 999px;
   padding: 8px 18px;
-  margin-bottom: 18px;
+  margin-bottom: 23px;
   box-shadow:
-    0 0 0 2px rgba(78, 143, 47, 0.3),
-    0 8px 14px -8px rgba(31, 63, 20, 0.45);
+    0 0 0 2px #a9c97e,
+    0 8px 14px -8px rgba(90, 70, 30, 0.4);
 }
-.best-score strong { font-family: var(--font-display); color: var(--orange-deep); font-size: 17px; }
+.best-score strong { font-family: var(--font-display); font-weight: 800; color: var(--orange-deep); font-size: 17px; }
 
-#btn-start { min-width: 230px; font-size: 24px; }
+#btn-start { min-width: min(230px, 76%); font-size: clamp(19px, 5.8vw, 25px); }
+
+/* 높이가 짧은 기기(≤700px): 랜딩 세로 여백 압축 */
+@media (max-height: 700px) {
+  .landing-roni { width: clamp(96px, 30vw, 130px); }
+  .landing-title { margin: 4px 0 17px; }
+  .landing-sub { margin-bottom: 17px; }
+  .best-score { margin-bottom: 17px; }
+  #btn-start { padding: 14px 24px; }
+}
 
 /* ═══════════════════════════════════════════
-   2. 게임 화면
+   2. 게임 화면 — 방향+파워 슈팅
    ═══════════════════════════════════════════ */
-#screen-game { background: linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 55%, var(--melon-200) 100%); }
-
-/* ── 경기장 배경 레이어 ────────────────────
-   전부 CSS / 인라인 SVG. 배경 요소는 채도·대비를 낮춰
-   공과 트랙이 계속 시선의 중심이 되도록 한다.
-   --horizon = 잔디가 시작하는 높이(화면 아래에서부터). */
-.field {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-  --horizon: 50%;    /* 골대 하단이 잔디에 닿는 높이 */
-  --stand-h: 150px;  /* 관중석 지붕이 골대 상단보다 위로 오도록 */
-}
-
-.sky {
-  position: absolute;
-  inset: 0 0 var(--horizon) 0;
-  background:
-    /* 지평선 쪽 옅은 아지랑이 — 관중석을 멀어 보이게 한다 */
-    linear-gradient(180deg, transparent 62%, rgba(255, 255, 255, 0.55) 100%),
-    /* 햇살 */
-    radial-gradient(circle at 84% 7%, rgba(255, 250, 224, 0.85), transparent 34%);
-}
-.cloud {
-  position: absolute;
-  width: 90px; height: 30px;
-  background: var(--white);
-  border-radius: 999px;
-  opacity: 0.92;
-  box-shadow: 22px -12px 0 -4px var(--white), -20px -8px 0 -8px var(--white);
-}
-.cloud-1 { top: 16%; left: 6%; animation: cloud-drift 26s linear infinite; }
-.cloud-2 { top: 5%; right: 8%; transform: scale(0.72); animation: cloud-drift 34s linear infinite reverse; }
-.cloud-3 { top: 34%; left: 44%; transform: scale(0.52); opacity: 0.7; animation: cloud-drift 44s linear infinite; }
-@keyframes cloud-drift {
-  0%, 100% { margin-left: 0; }
-  50% { margin-left: 40px; }
-}
-
-/* 관중석 — 멀리 있는 느낌: 저채도 + 살짝 블러 + 낮은 불투명도 */
-.stands {
-  position: absolute;
-  left: -6%; right: -6%;
-  bottom: var(--horizon);
-  height: var(--stand-h);
-  opacity: 0.6;
-  filter: blur(0.9px) saturate(0.5);
-}
-/* 스탠드 뒷벽/지붕 */
-.stands::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 22px 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 9px, transparent 9px),
-    linear-gradient(180deg, #cbd7c0 0%, #b3c4a7 46%, #9aad8e 100%);
-  border-radius: 12px 12px 0 0;
-  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.55);
-}
-/* 관중 = 점 패턴 3겹 (흰 / 그린 / 오렌지) */
-.stands-crowd {
-  position: absolute;
-  inset: 16px 7px 26px 7px;
-  background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.8) 1.5px, transparent 1.9px),
-    radial-gradient(circle, rgba(47, 92, 30, 0.55) 1.5px, transparent 1.9px),
-    radial-gradient(circle, rgba(239, 91, 37, 0.4) 1.5px, transparent 1.9px),
-    radial-gradient(circle, rgba(120, 140, 110, 0.4) 1.3px, transparent 1.7px),
-    /* 관중석 계단(열) 구분선 */
-    repeating-linear-gradient(180deg, rgba(80, 100, 70, 0.16) 0 1px, transparent 1px 10px);
-  background-size: 12px 10px, 12px 10px, 25px 20px, 19px 15px, 100% 100%;
-  background-position: 0 0, 6px 5px, 3px 13px, 9px 8px, 0 0;
-}
-/* 그라운드 펜스 / 광고판 */
-.stands-board {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 22px;
-  background: repeating-linear-gradient(90deg, #eef0e6 0 36px, #dae1cd 36px 72px);
-  border-top: 2px solid rgba(255, 255, 255, 0.65);
-  box-shadow: 0 2px 4px rgba(31, 63, 20, 0.18);
-}
-
-/* 삼각 깃발 가랜드 — 관중석 위에 한 줄 */
-.garland {
-  position: absolute;
-  left: -6%; right: -6%;
-  bottom: calc(var(--horizon) + var(--stand-h) - 4px);
-  height: 22px;
-  opacity: 0.75;
-  filter: saturate(0.75);
-  background-repeat: repeat-x;
-  background-size: 54px 22px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='54' height='22' viewBox='0 0 54 22'%3E%3Cpath d='M0 2.5 H54' stroke='%233f7a25' stroke-width='1.6' fill='none'/%3E%3Cpath d='M2 3 L16 3 L9 20 Z' fill='%23a8d95a'/%3E%3Cpath d='M20 3 L34 3 L27 20 Z' fill='%23fff6d8'/%3E%3Cpath d='M38 3 L52 3 L45 20 Z' fill='%23ff9a3c'/%3E%3C/svg%3E");
-}
-
-/* 잔디 — 잔디 깎은 자국(가로 줄무늬). 아래로 갈수록 줄이 넓어져 원근감을 준다.
-   두 톤의 명도 차를 작게 유지해 대비를 낮춘다. */
-.pitch {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: var(--horizon);
-  background: linear-gradient(180deg,
-    #93c063 0 4%,
-    #9dc86f 4% 9.5%,
-    #93c063 9.5% 17%,
-    #9dc86f 17% 27%,
-    #93c063 27% 39%,
-    #9dc86f 39% 53%,
-    #93c063 53% 69%,
-    #9dc86f 69% 87%,
-    #93c063 87% 100%);
-}
-/* 지평선 쪽을 살짝 밝게 눌러 원근감 + 배경 대비 완화 */
-.pitch::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(255, 253, 244, 0.5) 0%, rgba(255, 253, 244, 0) 34%);
-}
-.pitch-lines {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+#screen-game {
+  /* 배경: 잔디+골대 일러스트. 비율 유지(cover) + 중앙 기준 크롭.
+     경로는 style.css(프로젝트 루트) 기준. */
+  background: url("assets/images/bg.png") center / cover no-repeat;
+  cursor: pointer;
 }
 
 .game-inner {
@@ -442,106 +321,54 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  padding: 20px 22px calc(22px + env(safe-area-inset-bottom));
+  padding:
+    calc(clamp(10px, 1.8dvh, 16px) + env(safe-area-inset-top))
+    clamp(12px, 4.5%, 22px)
+    calc(clamp(12px, 2dvh, 20px) + env(safe-area-inset-bottom));
 }
 
-/* 골대 — 항상 화면 중앙 고정 (탭 목표 지점만 랜덤으로 움직인다) */
-.goal {
-  position: relative;
-  width: min(72%, 280px);
-  height: 118px;
-  margin-bottom: 26px;
+/* ── 상단 HUD ── */
+.hud {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
-.goal-frame {
-  position: absolute;
-  inset: 0;
-  border: 7px solid var(--white);
-  border-bottom: none;
-  border-radius: 14px 14px 0 0;
+.hud-chip {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(12px, 3.6vw, 16px);
+  letter-spacing: 0.06em;
+  color: var(--melon-800);
+  background: var(--white);
+  border: 3px solid var(--white);
+  border-radius: 999px;
+  padding: 8px 16px 7px;
   box-shadow:
-    0 -4px 10px rgba(31, 63, 20, 0.1),
-    inset 0 0 0 2px rgba(78, 143, 47, 0.18);
+    0 0 0 2px #a9c97e,
+    0 6px 12px -6px rgba(90, 70, 30, 0.4);
 }
-/* 골 네트도 멜론 그물망 톤으로 */
-.goal-net {
+.hud-chip strong { color: #e0703a; font-size: 1.15em; font-weight: 800; margin-left: 2px; }
+
+/* ── 골대 논리 영역 (과자 이동 범위 = 이 박스 안) ──
+   위치/크기는 JS(layoutGame)가 배경 cover 크롭과 같은 수식으로
+   계산해 px로 지정 → 어떤 화면비에서도 그림의 골대와 정렬. */
+.goal-area {
   position: absolute;
-  inset: 7px 7px 0 7px;
+  pointer-events: none;
+}
+/* 골망 출렁임 전용 오버레이 (배경의 골망 위에 살짝 겹쳐 흔들림만 표현) */
+.goal-net-fx {
+  position: absolute;
+  inset: 4px 4px 0 4px;
   background-image:
-    repeating-linear-gradient(0deg, rgba(78, 143, 47, 0.34) 0 1.6px, transparent 1.6px 14px),
-    repeating-linear-gradient(90deg, rgba(78, 143, 47, 0.34) 0 1.6px, transparent 1.6px 14px);
-  background-color: rgba(255, 246, 216, 0.35);
-  border-radius: 8px 8px 0 0;
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.35) 0 1.4px, transparent 1.4px 15px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.35) 0 1.4px, transparent 1.4px 15px);
+  border-radius: 10px 10px 0 0;
+  opacity: 0.22;
   transform-origin: 50% 0;
 }
-
-/* 트랙 */
-.track-wrap { width: 100%; margin-bottom: 18px; }
-.track {
-  position: relative;
-  width: 100%;
-  height: 58px;
-  background: linear-gradient(180deg, var(--cream-100) 0%, var(--cream) 100%);
-  border: 4px solid var(--white);
-  border-radius: 999px;
-  box-shadow:
-    0 0 0 3px var(--melon-500),
-    inset 0 3px 8px rgba(31, 63, 20, 0.14);
-}
-/* 탭 목표 지점 — --target-shift: 트랙 중앙 기준 오프셋(px). JS가 매 판 .game-inner에 세팅. */
-.goal-zone {
-  position: absolute;
-  top: -4px;
-  bottom: -4px;
-  left: calc(50% + var(--target-shift, 0px));
-  width: var(--goal-zone-width, 26%);
-  transform: translateX(-50%);
-  background: linear-gradient(180deg, rgba(200, 232, 107, 0.85), rgba(168, 217, 90, 0.7));
-  border-inline: 2.5px dashed var(--melon-600);
-  animation: zone-pulse 1.4s ease-in-out infinite;
-}
-@keyframes zone-pulse {
-  0%, 100% { opacity: 0.9; }
-  50% { opacity: 0.55; }
-}
-.goal-zone-center {
-  position: absolute;
-  top: -10px;
-  bottom: -10px;
-  left: calc(50% + var(--target-shift, 0px));
-  width: 3.5px;
-  transform: translateX(-50%);
-  background: var(--orange-deep);
-  border-radius: 999px;
-  box-shadow: 0 0 8px rgba(239, 91, 37, 0.85);
-}
-.ball {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 44px;
-  height: 44px;
-  transform: translate(-50%, -50%);
-  will-change: transform;
-  filter: drop-shadow(0 5px 5px rgba(31, 63, 20, 0.32));
-  z-index: 2;
-}
-/* 슛 연출용 공 (JS가 .game-inner에 생성 · 위치는 rAF가 제어) */
-.kick-ball {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 44px;
-  height: 44px;
-  transform-origin: 50% 50%;
-  will-change: transform, opacity;
-  filter: drop-shadow(0 6px 6px rgba(31, 63, 20, 0.28));
-  pointer-events: none;
-  z-index: 5;
-}
-
-/* 퍼펙트킥: 골망 출렁임 */
-.goal-net.is-shaking { animation: net-shake 0.55s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.goal-net-fx.is-shaking { animation: net-shake 0.55s cubic-bezier(0.34, 1.56, 0.64, 1); }
 @keyframes net-shake {
   0%   { transform: scaleY(1) translateY(0); }
   25%  { transform: scaleY(1.09) translateY(7px); }
@@ -550,67 +377,188 @@ body {
   100% { transform: scaleY(1) translateY(0); }
 }
 
-.track-hint {
-  font-family: var(--font-display);
-  text-align: center;
-  font-size: 14px;
-  letter-spacing: 0.1em;
-  color: var(--melon-800);
-  margin-top: 10px;
+/* ── 타깃: 메론킥 과자 ── */
+.snack {
+  position: absolute;
+  left: 0;
+  top: 0;
+  /* 크기는 JS(layoutGame)가 골대 폭 × SNACK_SIZE_RATIO로 지정 */
+  width: 60px;
+  height: 60px;
+  will-change: transform;
+  filter: drop-shadow(0 5px 6px rgba(31, 63, 20, 0.4));
 }
-.track-hint span { color: var(--orange-deep); }
-
-/* 로니 */
-.game-roni-wrap { position: relative; margin-bottom: 8px; }
-.game-roni {
-  width: 122px;
-  height: auto;
-  filter: drop-shadow(0 10px 12px rgba(31, 63, 20, 0.32));
-  transition: transform 0.2s ease;
-}
-.game-roni.is-kicking { animation: roni-kick 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
-@keyframes roni-kick {
-  0%   { transform: rotate(0deg); }
-  30%  { transform: rotate(-14deg) translateX(-6px); }
-  60%  { transform: rotate(10deg) translateX(8px) scale(1.06); }
-  100% { transform: rotate(0deg); }
-}
-
-/* 탭 버튼 */
-.btn-tap {
+.snack img {
   position: relative;
-  font-family: var(--font-display);
-  width: min(100%, 320px);
-  padding: 20px 0 18px;
-  font-size: 26px;
-  letter-spacing: 0.18em;
-  color: var(--white);
-  background: linear-gradient(180deg, var(--orange) 0%, var(--orange-deep) 100%);
-  border: 4px solid var(--white);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  cursor: pointer;
-  box-shadow:
-    0 7px 0 var(--orange-shadow),
-    0 18px 30px -12px rgba(191, 65, 20, 0.6),
-    0 0 0 3px rgba(47, 92, 30, 0.14);
-  text-shadow: 0 2px 0 rgba(120, 40, 8, 0.28);
-  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.2s ease;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;   /* melonkick.png(139×320) 비율 유지 · 세로로 긴 스틱 */
 }
-.btn-tap::after {
+/* 바닥 그림자 — 잔디에 서 있는 느낌 */
+.snack::after {
   content: "";
   position: absolute;
-  left: 5%; right: 5%; top: 5px;
-  height: 36%;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0));
+  left: 50%;
+  bottom: -4px;
+  width: 72%;
+  height: 12px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(31, 63, 20, 0.4) 0%, rgba(31, 63, 20, 0) 68%);
   pointer-events: none;
 }
-.btn-tap:active {
-  transform: translateY(3px);
-  box-shadow: 0 3px 0 var(--orange-shadow), 0 10px 18px -10px rgba(191, 65, 20, 0.5), 0 0 0 3px rgba(47, 92, 30, 0.14);
+/* melonkick.png 로드 실패 시 임시 도형 (메론킥 낱개 느낌의 크림 스틱) */
+.snack.no-img img { display: none; }
+.snack.no-img::before {
+  content: "";
+  position: absolute;
+  inset: 8% 22%;
+  background: linear-gradient(180deg, var(--cream-100) 0%, var(--cream-deep) 100%);
+  border: 3px solid var(--melon-400);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 -4px 0 rgba(168, 217, 90, 0.5),
+    0 3px 6px rgba(31, 63, 20, 0.25);
 }
-.btn-tap:disabled { filter: grayscale(0.6) brightness(0.92); pointer-events: none; }
+/* 명중 점수 팝업 */
+.hit-popup {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(22px, 7.5vw, 34px);
+  color: var(--orange-deep);
+  text-shadow: var(--logo-outline), 0 0.12em 0 rgba(120, 40, 8, 0.3);
+  pointer-events: none;
+  animation: popup-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  z-index: 3;
+}
+@keyframes popup-rise {
+  0%   { opacity: 0; margin-top: 10px; scale: 0.4; }
+  25%  { opacity: 1; scale: 1.2; }
+  60%  { opacity: 1; margin-top: -16px; scale: 1; }
+  100% { opacity: 0; margin-top: -34px; scale: 1; }
+}
+
+/* ── 하단 슈팅 존: 공 + 조준 화살표 ──
+   위치는 dvh 기준(짧은 화면에서도 골대·게이지와 안 겹침),
+   크기는 화면 폭 비례 clamp. */
+.shoot-zone {
+  position: absolute;
+  bottom: clamp(96px, 16dvh, 156px);
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.ball-wrap {
+  position: relative;
+  width: clamp(44px, 13.5%, 64px);   /* 화면 폭에 비례하는 공 크기 */
+}
+.shoot-ball {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 6px 6px rgba(31, 63, 20, 0.35));
+}
+/* 조준 화살표 — 공 중심을 축으로 좌우 부채꼴 회전 (각도는 JS) · 공 크기에 비례 */
+.aim-arrow {
+  position: absolute;
+  left: 50%;
+  bottom: 50%;
+  width: 72%;
+  transform-origin: 50% 100%;
+  transform: translateX(-50%);
+  will-change: transform;
+  filter: drop-shadow(0 3px 5px rgba(31, 63, 20, 0.3));
+  z-index: 2;
+}
+.aim-arrow svg { display: block; width: 100%; height: auto; }
+
+/* 비행용 공 — .game-inner 기준 좌표를 JS가 transform으로 제어 */
+.fly-ball {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: clamp(44px, 13.5%, 64px);
+  height: auto;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 6px 6px rgba(31, 63, 20, 0.28));
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ── 파워 게이지 ── */
+.power-wrap {
+  position: absolute;
+  bottom: calc(clamp(46px, 8dvh, 78px) + env(safe-area-inset-bottom));
+  left: clamp(14px, 5%, 26px);
+  right: clamp(14px, 5%, 26px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.45;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.power-wrap.is-active { opacity: 1; }
+.power-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(13px, 4vw, 17px);
+  letter-spacing: 0.1em;
+  color: var(--white);
+  text-shadow: 0 2px 0 rgba(31, 63, 20, 0.55), 0 0 6px rgba(31, 63, 20, 0.4);
+}
+.power-bar {
+  position: relative;
+  flex: 1;
+  height: clamp(18px, 5.5vw, 26px);
+  border-radius: 999px;
+  border: 3px solid var(--white);
+  box-shadow:
+    0 0 0 2px rgba(47, 92, 30, 0.25),
+    0 8px 14px -8px rgba(31, 63, 20, 0.5);
+  overflow: visible;
+}
+.power-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  /* 초록→노랑→빨강 · 배경 일러스트 톤에 맞춘 부드러운 색 */
+  background: linear-gradient(90deg, #8fca6b 0%, #b9d96e 32%, #f2d264 58%, #f0a054 80%, #e2694d 100%);
+}
+.power-cursor {
+  position: absolute;
+  top: -7px;
+  bottom: -7px;
+  left: 0;
+  width: 6px;
+  transform: translateX(-50%);
+  background: var(--white);
+  border-radius: 999px;
+  box-shadow: 0 0 0 1.5px rgba(47, 92, 30, 0.5), 0 2px 6px rgba(31, 63, 20, 0.5);
+  will-change: left;
+}
+
+/* ── 단계 안내 문구 ── */
+.phase-hint {
+  position: absolute;
+  bottom: calc(clamp(10px, 2dvh, 22px) + env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(14px, 4.4vw, 18px);
+  letter-spacing: 0.06em;
+  color: var(--white);
+  text-shadow: 0 2px 0 rgba(31, 63, 20, 0.6), 0 0 8px rgba(31, 63, 20, 0.45);
+  pointer-events: none;
+  min-height: 24px;
+}
 
 /* 카운트다운 */
 .countdown {
@@ -625,7 +573,8 @@ body {
 }
 .countdown span {
   font-family: var(--font-display);
-  font-size: 120px;
+  font-weight: 900;
+  font-size: clamp(84px, 30vw, 132px);
   color: var(--cream);
   text-shadow: 0 8px 0 rgba(47, 92, 30, 0.75);
   animation: count-pop 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -645,10 +594,10 @@ body {
   align-items: center;
   justify-content: center;
   font-family: var(--font-display);
+  font-weight: 900;
   font-size: clamp(42px, 12vw, 52px);
   line-height: 1.3;
-  letter-spacing: 0.05em;
-  text-indent: 0.05em;
+  letter-spacing: -0.02em;
   color: var(--melon-700);
   text-shadow:
     var(--logo-outline),
@@ -669,9 +618,7 @@ body {
    3. 결과 화면
    ═══════════════════════════════════════════ */
 #screen-result {
-  background:
-    radial-gradient(circle at 15% 10%, rgba(255, 255, 255, 0.7), transparent 36%),
-    linear-gradient(170deg, var(--melon-200) 0%, var(--melon-300) 55%, var(--melon-400) 100%);
+  background: url("assets/images/bg.png") center / cover no-repeat;
   align-items: center;
   justify-content: center;
 }
@@ -688,16 +635,17 @@ body {
 
 .new-record {
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: 17px;
   color: var(--white);
-  background: linear-gradient(180deg, var(--orange) , var(--orange-deep));
-  border: 3px solid var(--white);
+  background: #f5934d;
+  border: 4px solid var(--white);
   padding: 8px 20px 7px;
   border-radius: 999px;
   box-shadow:
-    0 0 0 2px rgba(47, 92, 30, 0.18),
-    0 8px 18px -8px rgba(191, 65, 20, 0.7);
-  text-shadow: 0 2px 0 rgba(120, 40, 8, 0.28);
+    0 3px 0 #c9793c,
+    0 8px 16px -8px rgba(90, 60, 25, 0.5);
+  text-shadow: 0 2px 0 rgba(120, 60, 15, 0.25);
   margin-bottom: 14px;
   animation: badge-bounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -707,34 +655,37 @@ body {
   100% { transform: scale(1) rotate(0); }
 }
 
-/* 결과 카드 = 패키지 씰 */
+/* 결과 카드 = 그림책에 붙인 흰 스티커 */
 .result-card {
   width: 100%;
-  background: linear-gradient(180deg, var(--white) 0%, var(--cream-100) 100%);
+  background: var(--white);
   border-radius: var(--radius-lg);
   padding: 26px 24px 22px;
   text-align: center;
   border: 5px solid var(--white);
   box-shadow:
-    0 0 0 3px var(--melon-500),
-    var(--shadow-card);
+    0 0 0 3px #a9c97e,
+    0 16px 32px -16px rgba(90, 70, 30, 0.5);
 }
 
 .result-card-title {
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: 15px;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.14em;
   color: var(--melon-700);
   margin-bottom: 2px;
 }
 
 .result-accuracy {
   font-family: var(--font-display);
-  font-size: 84px;
+  font-weight: 900;
+  font-size: clamp(58px, 20vw, 90px);
   line-height: 1.05;
+  letter-spacing: -0.02em;
   color: var(--ink);
 }
-.result-accuracy em { font-style: normal; font-size: 40px; color: var(--melon-600); margin-left: 2px; }
+.result-accuracy em { font-style: normal; font-size: 0.47em; color: var(--melon-600); margin-left: 2px; }
 
 .accuracy-bar {
   height: 13px;
@@ -748,13 +699,23 @@ body {
   height: 100%;
   width: 0%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--melon-300), var(--melon-600));
+  background: #93c063;   /* 잔디 그린 */
   transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s;
+}
+
+.result-hits {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--melon-800);
+  margin-bottom: 6px;
 }
 
 .result-grade {
   font-family: var(--font-display);
-  font-size: 34px;
+  font-weight: 800;
+  font-size: clamp(26px, 8.5vw, 36px);
+  letter-spacing: -0.02em;
   margin-bottom: 12px;
 }
 .result-grade.grade-perfect { color: var(--orange-deep); }
@@ -766,7 +727,7 @@ body {
   display: inline-block;
   margin-bottom: 8px;
 }
-.result-roni { width: 128px; height: auto; }
+.result-roni { width: clamp(96px, 30vw, 144px); height: auto; }
 .result-roni.pose-perfect { animation: roni-cheer 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) infinite alternate; }
 .result-roni.pose-good    { animation: roni-nod 1.2s ease-in-out infinite; }
 .result-roni.pose-miss    { filter: saturate(0.45) brightness(0.96); transform: rotate(-5deg); }
@@ -798,7 +759,7 @@ body {
   border-top: 2px dashed var(--melon-200);
   padding-top: 12px;
 }
-.result-best strong { font-family: var(--font-display); color: var(--melon-700); }
+.result-best strong { font-family: var(--font-display); font-weight: 800; color: var(--melon-700); }
 
 .result-actions {
   display: flex;
@@ -808,7 +769,16 @@ body {
   width: 100%;
   margin-top: 18px;
 }
-#btn-retry { font-size: 24px; padding: 19px 26px; letter-spacing: 0.08em; }
+#btn-retry { font-size: clamp(19px, 5.8vw, 25px); padding: clamp(14px, 2.4dvh, 19px) 26px; letter-spacing: 0.08em; }
+
+/* 높이가 짧은 기기(≤700px): 결과 카드 압축 */
+@media (max-height: 700px) {
+  .result-card { padding: 16px 20px 14px; }
+  .result-roni { width: clamp(80px, 24vw, 110px); }
+  .result-accuracy { font-size: clamp(48px, 16vw, 70px); }
+  .result-inner { padding-top: 12px; }
+  .result-actions { margin-top: 12px; }
+}
 
 /* 콘페티 */
 .confetti-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
