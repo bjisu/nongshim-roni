@@ -181,10 +181,17 @@ body {
 }
 .btn:active { transform: translateY(2px) scale(0.98); }
 
-/* 스티커 버튼 — 그림책에 붙인 스티커 느낌: 두툼한 흰 테두리 + 부드러운 그림자 */
+/* 스티커 버튼 — 그림책에 붙인 스티커 느낌: 두툼한 흰 테두리 + 부드러운 그림자.
+   시작하기/다시하기 공통: 폭·높이·폰트·라운드·그림자 전부 여기서만 정의 */
 .btn-primary {
-  padding: clamp(14px, 2.4dvh, 19px) 30px;
-  font-size: clamp(18px, 5.4vw, 23px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* vw 기준이라 부모 패딩이 달라도 두 화면에서 완전히 같은 폭 */
+  width: min(68vw, 260px);
+  height: clamp(48px, 7dvh, 54px);   /* 모바일 탭 최소 48px 보장 */
+  padding: 0 20px;
+  font-size: clamp(17px, 4.8vw, 20px);
   letter-spacing: 0.06em;
   color: var(--white);
   background: #f5934d;                 /* 배경 꽃/지붕에서 뽑은 웜 오렌지 */
@@ -294,15 +301,12 @@ body {
 }
 .best-score strong { font-family: var(--font-display); font-weight: 800; color: var(--orange-deep); font-size: 17px; }
 
-#btn-start { min-width: min(230px, 76%); font-size: clamp(19px, 5.8vw, 25px); }
-
 /* 높이가 짧은 기기(≤700px): 랜딩 세로 여백 압축 */
 @media (max-height: 700px) {
   .landing-roni { width: clamp(96px, 30vw, 130px); }
   .landing-title { margin: 4px 0 17px; }
   .landing-sub { margin-bottom: 17px; }
   .best-score { margin-bottom: 17px; }
-  #btn-start { padding: 14px 24px; }
 }
 
 /* ═══════════════════════════════════════════
@@ -794,12 +798,11 @@ body {
 .result-actions {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;   /* 버튼은 공통 크기 그대로 가로 중앙 */
   gap: 10px;
   width: 100%;
   margin-top: 18px;
 }
-#btn-retry { font-size: clamp(19px, 5.8vw, 25px); padding: clamp(14px, 2.4dvh, 19px) 26px; letter-spacing: 0.08em; }
 
 /* 높이가 짧은 기기(≤700px): 결과 카드 압축 */
 @media (max-height: 700px) {
