@@ -4,8 +4,9 @@
 
    조작: ① 공을 잡고 드래그 → 조준 화살표가 손가락을 따라 회전, 놓으면 방향 고정
          ② 왕복하는 파워 게이지를 탭 → 파워 고정 + 슈팅
-   규칙: 슈팅 1회당 10초 제한시간 · 한 게임 3회 슈팅 · 명중당 100점(최대 300)
-         타깃(메론킥 과자)은 골대 바닥에서 슛마다 새 랜덤 가로 위치로 이동
+   규칙: 방향이 골대 안 + 파워가 적정 구간이면 골인(+100점)
+         슈팅 1회당 10초 제한시간 · 한 게임 3회 슈팅 · 최대 300점
+         골키퍼 로니는 연출 전용(골이면 반대로, 빗나가면 공 쪽으로 다이빙)
    ═══════════════════════════════════════════ */
 
 "use strict";
@@ -14,7 +15,7 @@
 const CONFIG = {
   /* ── 게임 구조 ── */
   SHOTS_PER_GAME: 3,          // 한 게임 슈팅 횟수
-  SCORE_PER_HIT: 100,         // 명중당 점수
+  SCORE_PER_GOAL: 100,        // 골인당 점수
   COUNTDOWN_FROM: 3,          // 시작 카운트다운
 
   /* ── 슈팅 제한시간 ── */
@@ -28,16 +29,6 @@ const CONFIG = {
   BG_IMAGE_H: 1088,
   BG_GOAL_RECT: { x1: 0.178, x2: 0.822, y1: 0.400, y2: 0.545 }, // 골대 안쪽 영역 (이미지 대비 비율)
 
-  /* ── 타깃(메론킥 과자) ──
-     골대 안 잔디 바닥(골라인 근처)에 서 있다. 조준·슈팅 중에는 고정.
-     슛 1회가 끝날 때마다 바닥을 따라 새 랜덤 "가로" 위치로 스르륵 이동.
-     첫 위치도 랜덤. 크기·거리 전부 골대 크기 대비 비율 → 화면 크기 무관 동일 난이도. */
-  SNACK_SIZE_RATIO: 0.21,       // 과자 박스 = 골대 폭 × 이 값
-  SNACK_AREA_INSET_X: 0.08,     // 바닥 이동 범위: 좌우 여백 (골대 폭 대비 비율)
-  SNACK_GROUND_OFFSET_RATIO: 0.015, // 골대 하단에서 이만큼 위에 발 (골대 높이 대비)
-  SNACK_MIN_JUMP_RATIO: 0.16,   // 새 위치는 직전과 최소 이만큼 (이동 범위 대비 비율)
-  SNACK_MOVE_MS: 380,           // 새 위치까지 이동 시간 (ease-out · 짧고 담백하게)
-
   /* ── 1단계: 드래그 조준 ──
      공을 터치(클릭)하면 조준 시작, 손가락을 따라 화살표가 실시간 회전,
      떼면 그 방향으로 고정. */
@@ -47,8 +38,6 @@ const CONFIG = {
 
   /* ── 2단계: 파워 게이지 ── */
   POWER_SWEEP_SPEED: 1.1,     // 게이지 왕복 속도 (1초당 편도 횟수)
-  POWER_GOAL_MIN: 0.38,       // 이 미만이면 골대까지 못 감 (약함)
-  POWER_GOAL_MAX: 0.82,       // 이 초과면 골대 위로 넘어감 (너무 강함)
 
   /* ── 슛 비행 연출 (거리 값은 화면 높이 대비 비율) ── */
   FLY_DURATION_MS: 700,       // 비행 시간
@@ -58,8 +47,16 @@ const CONFIG = {
   SHORT_LAND_MARGIN_RATIO: 0.032, // 파워 부족 시 골대 아래 착지 여유 (화면 높이 대비)
   OVER_RISE_RATIO: 0.105,     // 파워 초과 시 골대 상단 위로 솟는 높이 (화면 높이 대비)
 
-  /* ── 판정 ── */
-  HIT_RADIUS_RATIO: 0.85,     // 명중 반경 = 과자 크기 × 이 값 (과자가 골대에 비례하므로 화면 크기 무관 동일 난이도)
+  /* ── 골키퍼 로니 (연출 전용 · 골인 판정과 무관) ── */
+  KEEPER_IMG_VERSION: "v=1",  // 이미지 캐시버스터 (이미지 교체 시 올리기)
+  KEEPER_ZONE_SPLIT: 1 / 3,   // 정규화 조준각(-1~1)의 구간 경계 — |각| ≤ 이 값이면 중앙(up), 넘으면 좌/우 (기본 3등분)
+
+  /* ── 판정: 골인 ──
+     골인 = 방향이 골대 안쪽 범위 AND 파워가 적정 구간.
+     그 외(옆 빗나감/파워 부족/파워 과다/시간 초과)는 전부 노골. */
+  GOAL_DIRECTION_RATIO: 0.85, // |정규화 조준각| ≤ 이 값이면 방향이 골대 안 (1 ≈ 골포스트)
+  POWER_GOAL_MIN: 0.40,       // 파워 적정 구간 하한 (게이지의 40%) — 미만이면 골대까지 못 감
+  POWER_GOAL_MAX: 0.85,       // 파워 적정 구간 상한 (게이지의 85%) — 초과면 골대 위로 넘어감
 
   /* ── 흐름 ── */
   NEXT_SHOT_DELAY_MS: 950,    // 판정 후 다음 슈팅 준비까지 대기
@@ -67,11 +64,11 @@ const CONFIG = {
 
   STORAGE_KEY: "roni_best_score", // 최고기록 (총점 기준 · 기존 키 재활용)
 
-  /* ── 결과 등급 (명중 횟수 기준) ── */
+  /* ── 결과 등급 (골 수 기준) ── */
   GRADES: [
-    { minHits: 3, key: "perfect", label: "퍼펙트!",  comment: "3발 전부 명중! 로니가 신나서 환호하고 있어요!" },
-    { minHits: 1, key: "good",    label: "굿샷!",    comment: "좋아요! 과자의 움직임을 읽으면 전부 맞힐 수 있어요." },
-    { minHits: 0, key: "miss",    label: "아쉬워요…", comment: "괜찮아요! 파워는 초록~노랑 구간을 노려보세요." },
+    { minGoals: 3, key: "perfect", label: "해트트릭!", comment: "3골 전부 성공! 로니 골키퍼도 두 손 들었어요!" },
+    { minGoals: 1, key: "good",    label: "굿샷!",     comment: "좋아요! 방향과 파워를 다듬으면 해트트릭도 가능해요." },
+    { minGoals: 0, key: "miss",    label: "아쉬워요…", comment: "괜찮아요! 파워는 게이지 40~85% 구간을 노려보세요." },
   ],
 };
 
@@ -92,8 +89,8 @@ const el = {
   timerRing: $("#timer-ring-fg"),
   goalArea: $("#goal-area"),
   goalNetFx: $("#goal-net-fx"),
-  snack: $("#snack"),
-  snackImg: $("#snack-img"),
+  keeper: $("#keeper"),
+  keeperImg: $("#keeper-img"),
   aimArrow: $("#aim-arrow"),
   shootBall: $("#shoot-ball"),
   flyBall: $("#fly-ball"),
@@ -117,10 +114,10 @@ const el = {
 
 /* ── 상태 ────────────────────────────────── */
 const state = {
-  phase: "landing",   // landing | countdown | aim | power | fly | wait | result
+  phase: "landing",   // landing | countdown | aim | aiming | power | fly | wait | result
   score: 0,
   shotsLeft: CONFIG.SHOTS_PER_GAME,
-  hits: 0,
+  goals: 0,           // 골인 수
 
   aimAngle: 0,        // 현재 화살표 각도 (도)
   aimPointerId: null, // 조준 중인 포인터 id
@@ -129,14 +126,10 @@ const state = {
   power: 0,           // 현재 게이지 값 (0~1)
   powerDir: 1,        // 게이지 진행 방향
 
-  snackXR: 0.5,       // 과자 가로 위치 (이동 범위 내 0~1 비율 · 리사이즈에도 상대 위치 유지)
-  snackSize: 66,      // 현재 과자 박스 px (layoutGame이 골대 크기로부터 계산)
-  snackHop: null,     // 통통 이동 중 데이터 { fromXR, toXR, start }
-
   fly: null,          // 비행 중 데이터 { from, to, start, outcome, ... }
   rafId: null,
   lastTime: null,
-  lastResult: null,   // { score, hits, grade, isNewRecord }
+  lastResult: null,   // { score, goals, grade, isNewRecord }
   recordFadeT: null,  // "최고기록 갱신!" 페이드아웃 타이머
 };
 
@@ -149,10 +142,20 @@ function saveBest(score) {
   try { localStorage.setItem(CONFIG.STORAGE_KEY, String(score)); } catch (_) { /* 시크릿 모드 등 */ }
 }
 
-/* 과자 이미지 없으면 CSS 임시 도형으로
-   (스크립트 로드 전에 이미 로드 실패했을 수도 있어 complete 상태도 확인) */
-el.snackImg.addEventListener("error", () => el.snack.classList.add("no-img"));
-if (el.snackImg.complete && el.snackImg.naturalWidth === 0) el.snack.classList.add("no-img");
+/* ── 골키퍼 (연출 전용) ────────────────────
+   조준·파워 중엔 default. 슈팅 순간:
+   골인 → 공과 "다른" 방향으로 다이빙(못 막은 연출),
+   옆 빗나감 → 공 방향으로 다이빙, 파워 과다 → 위로, 파워 부족 → 준비 자세 유지.
+   다음 슈팅 준비 시 default 복귀. 골인 판정에는 관여하지 않는다. */
+const keeperSrc = (pose) => `assets/images/roni_${pose}.png?${CONFIG.KEEPER_IMG_VERSION}`;
+// 4장 모두 프리로드 — 전환 순간 로딩 딜레이/깜빡임 방지
+["default", "left", "right", "up"].forEach((p) => { new Image().src = keeperSrc(p); });
+
+function setKeeperPose(pose) {
+  el.keeperImg.src = keeperSrc(pose);
+  el.keeper.classList.remove("dive-left", "dive-right", "dive-up");
+  if (pose !== "default") el.keeper.classList.add(`dive-${pose}`);
+}
 
 /* ── 화면 전환 ───────────────────────────── */
 function showScreen(name) {
@@ -174,7 +177,7 @@ function renderHud() {
 
 /* ── 슈팅 제한시간 타이머 ──────────────────
    조준 가능 시점(beginAim)부터 카운트. 슈팅(파워 확정) 순간 멈추고,
-   다음 슈팅 준비 시 리셋. 결과 연출·과자 이동 중에는 돌지 않는다
+   다음 슈팅 준비 시 리셋. 비행·판정 연출 중에는 돌지 않는다
    (메인 루프에서 aim/aiming/power 단계에만 갱신). */
 const TIMER_RING_CIRC = 2 * Math.PI * 8; // SVG r=8 원주
 
@@ -219,7 +222,6 @@ function timeUp() {
   el.phaseHint.textContent = "";
 
   if (state.shotsLeft > 0) {
-    setTimeout(hopSnack, 250);
     setTimeout(beginAim, CONFIG.NEXT_SHOT_DELAY_MS);
   } else {
     setTimeout(finishGame, CONFIG.RESULT_DELAY_MS);
@@ -246,78 +248,6 @@ function layoutGame() {
   el.goalArea.style.top = `${oy + r.y1 * ih}px`;
   el.goalArea.style.width = `${(r.x2 - r.x1) * iw}px`;
   el.goalArea.style.height = `${(r.y2 - r.y1) * ih}px`;
-
-  state.snackSize = (r.x2 - r.x1) * iw * CONFIG.SNACK_SIZE_RATIO;
-  el.snack.style.width = `${state.snackSize}px`;
-  el.snack.style.height = `${state.snackSize}px`;
-}
-
-/* ── 과자(타깃) 위치 ───────────────────────
-   골대 안 잔디 바닥에 서 있고, 이동은 바닥을 따라 좌우로만.
-   가로 위치는 0~1 비율(snackXR)로만 들고 px는 매번 현재 골대
-   크기에서 계산 → 리사이즈에도 상대 위치가 유지된다.
-   조준·슈팅 중에는 고정. 슛이 끝날 때마다 새 랜덤 가로 위치로
-   통통 튀며 이동한다. 순간이동 없음. */
-function snackBounds() {
-  const w = el.goalArea.clientWidth;
-  const h = el.goalArea.clientHeight;
-  const half = state.snackSize / 2;
-  const ix = w * CONFIG.SNACK_AREA_INSET_X + half;
-  return {
-    minX: ix,
-    maxX: Math.max(ix, w - ix),
-    groundY: h - half - h * CONFIG.SNACK_GROUND_OFFSET_RATIO, // 발이 골대 하단에 닿는 중심 y
-  };
-}
-
-/* 과자 중심의 골대 영역 내 px 좌표 (항상 현재 크기 기준으로 계산) */
-function snackPx() {
-  const b = snackBounds();
-  return { x: b.minX + state.snackXR * (b.maxX - b.minX), y: b.groundY };
-}
-
-function randomSnackXR() {
-  let r = state.snackXR;
-  for (let i = 0; i < 8; i++) {
-    r = Math.random();
-    if (Math.abs(r - state.snackXR) >= CONFIG.SNACK_MIN_JUMP_RATIO) break;
-  }
-  return r;
-}
-
-/* 게임 시작: 첫 위치도 랜덤 (등장은 즉시 배치) */
-function resetSnack() {
-  state.snackHop = null;
-  state.snackXR = Math.random();
-  placeSnack();
-}
-
-/* 새 랜덤 위치로 부드럽게 미끄러지듯 이동 시작 */
-function hopSnack() {
-  state.snackHop = {
-    fromXR: state.snackXR,
-    toXR: randomSnackXR(),
-    start: performance.now(),
-  };
-}
-
-function updateSnackHop(now) {
-  const hop = state.snackHop;
-  if (!hop) return;
-  const p = Math.min((now - hop.start) / CONFIG.SNACK_MOVE_MS, 1);
-  const e = 1 - Math.pow(1 - p, 3); // ease-out: 감속하며 스르륵 도착
-  state.snackXR = hop.fromXR + (hop.toXR - hop.fromXR) * e;
-  placeSnack();
-  if (p >= 1) {
-    state.snackHop = null;
-    placeSnack();
-  }
-}
-
-function placeSnack() {
-  const p = snackPx();
-  el.snack.style.transform =
-    `translate(${p.x}px, ${p.y}px) translate(-50%, -50%)`;
 }
 
 /* ── 게임 시작 ───────────────────────────── */
@@ -326,7 +256,7 @@ function startGame() {
   showScreen("game");
   state.phase = "countdown";
   state.score = 0;
-  state.hits = 0;
+  state.goals = 0;
   state.shotsLeft = CONFIG.SHOTS_PER_GAME;
   state.fly = null;
   renderHud();
@@ -334,8 +264,8 @@ function startGame() {
   el.flyBall.classList.add("hidden");
   el.shootBall.style.visibility = "";
   el.goalNetFx.classList.remove("is-shaking");
-  layoutGame();  // 골대·과자 크기를 현재 화면에 맞춤
-  resetSnack();  // 첫 위치 랜덤
+  setKeeperPose("default"); // 재시작 시 준비 자세
+  layoutGame();  // 골대 논리 영역을 현재 화면에 맞춤
   renderTimer(CONFIG.SHOT_TIME_LIMIT_MS); // 다시하기 포함 항상 풀 타이머로 초기화
   startLoop();
 
@@ -370,6 +300,7 @@ function beginAim(resetTimer = true) {
   state.power = 0;
   state.powerDir = 1;
   placePowerCursor();
+  setKeeperPose("default"); // 다음 슈팅 준비 → 준비 자세 복귀
   el.phaseHint.textContent = "공을 잡고 조준하세요!";
   if (resetTimer) {
     state.shotDeadline = performance.now() + CONFIG.SHOT_TIME_LIMIT_MS;
@@ -471,9 +402,11 @@ function computeShot(angleDeg, power) {
   }
 
   // 적정 파워: 골대 평면 도달. 파워가 셀수록 골대 안 높은 곳에 꽂힌다.
+  // 방향까지 골대 안쪽 범위면 "골인", 옆으로 벗어나면 "옆 빗나감(wide)".
+  const onTarget = Math.abs(a) <= CONFIG.GOAL_DIRECTION_RATIO;
   const h = (power - CONFIG.POWER_GOAL_MIN) / (CONFIG.POWER_GOAL_MAX - CONFIG.POWER_GOAL_MIN); // 0~1
   return {
-    outcome: "reach",
+    outcome: onTarget ? "goal" : "wide",
     from,
     to: {
       x: from.x + a * spread,
@@ -492,6 +425,23 @@ function shoot() {
   state.fly = { ...shot, start: performance.now() };
   el.aimArrow.classList.add("hidden");
   el.phaseHint.textContent = "";
+
+  // 골키퍼 연출 (판정 무관): 공이 가는 방향 구간(좌/중/우)을 기준으로
+  //  골인 → 공과 "다른" 방향으로 다이빙 = 못 막은 것처럼
+  //  옆 빗나감 → 공 방향으로 다이빙 (따라갔지만 공이 밖으로)
+  //  파워 과다 → 위로 점프 (공이 그 위로 넘어감) · 파워 부족 → 준비 자세 유지
+  const a = state.aimAngle / CONFIG.AIM_MAX_ANGLE; // -1 ~ 1
+  const ballZone = a < -CONFIG.KEEPER_ZONE_SPLIT ? "left" : a > CONFIG.KEEPER_ZONE_SPLIT ? "right" : "up";
+  let pose = "default";
+  if (shot.outcome === "goal") {
+    const others = ["left", "up", "right"].filter((z) => z !== ballZone);
+    pose = others[Math.floor(Math.random() * others.length)];
+  } else if (shot.outcome === "wide") {
+    pose = ballZone;
+  } else if (shot.outcome === "over") {
+    pose = "up";
+  }
+  setKeeperPose(pose);
 
   // 발사 위치에서 비행용 공으로 교체
   el.shootBall.style.visibility = "hidden";
@@ -515,39 +465,26 @@ function updateFly(now) {
   if (p >= 1) resolveShot();
 }
 
-/* ── 판정: 도착 순간의 과자 위치와 비교 ──── */
+/* ── 판정: 골인 여부 (computeShot의 outcome으로 이미 확정) ── */
 function resolveShot() {
   const f = state.fly;
   state.fly = null;
   state.phase = "wait";
   state.shotsLeft -= 1;
 
-  let hit = false;
-  if (f.outcome === "reach") {
-    // 과자 중심의 .game-inner 기준 좌표 (도착한 "그 순간" 위치)
-    const sp = snackPx();
-    const snackX = f.goal.left + sp.x;
-    const snackY = f.goal.top + sp.y;
-    const dist = Math.hypot(f.to.x - snackX, f.to.y - snackY);
-    hit = dist <= state.snackSize * CONFIG.HIT_RADIUS_RATIO; // 과자 크기 비례 → 화면 무관 동일 난이도
-  }
+  const isGoal = f.outcome === "goal";
 
-  if (hit) {
-    state.hits += 1;
-    state.score += CONFIG.SCORE_PER_HIT;
+  if (isGoal) {
+    state.goals += 1;
+    state.score += CONFIG.SCORE_PER_GOAL;
     el.flyBall.classList.add("hidden");
-    // "퍼펙트!" 플래시 — "시간 초과!"와 동일 스타일/애니메이션
-    showFlash("퍼펙트!");
+    // "GOAL!" 플래시 — "시간 초과!"와 동일 스타일/애니메이션
+    showFlash("GOAL!");
     el.goalNetFx.classList.remove("is-shaking");
     void el.goalNetFx.offsetWidth;
     el.goalNetFx.classList.add("is-shaking");
   } else {
-    if (f.outcome === "reach") {
-      // 골대엔 들어갔지만 과자를 빗나감 → 골망만 출렁
-      el.goalNetFx.classList.remove("is-shaking");
-      void el.goalNetFx.offsetWidth;
-      el.goalNetFx.classList.add("is-shaking");
-    }
+    // 노골: 플래시 없이 하단 힌트로만 안내
     if (f.outcome !== "over") {
       setTimeout(() => el.flyBall.classList.add("hidden"), 250);
     } else {
@@ -556,13 +493,11 @@ function resolveShot() {
   }
   renderHud();
 
-  el.phaseHint.textContent = hit ? "" :
+  el.phaseHint.textContent = isGoal ? "" :
     f.outcome === "short" ? "파워가 부족했어요…" :
-    f.outcome === "over" ? "너무 세게 찼어요!" : "과자를 빗나갔어요!";
+    f.outcome === "over" ? "너무 세게 찼어요!" : "옆으로 빗나갔어요!";
 
   if (state.shotsLeft > 0) {
-    // 판정 리액션이 살짝 보인 뒤, 과자가 새 랜덤 위치로 스르륵 이동
-    setTimeout(hopSnack, hit ? 420 : 180);
     setTimeout(beginAim, CONFIG.NEXT_SHOT_DELAY_MS);
   } else {
     setTimeout(finishGame, CONFIG.RESULT_DELAY_MS);
@@ -571,20 +506,20 @@ function resolveShot() {
 
 /* ── 게임 종료 → 결과 ────────────────────── */
 function finishGame() {
-  const grade = CONFIG.GRADES.find((g) => state.hits >= g.minHits);
+  const grade = CONFIG.GRADES.find((g) => state.goals >= g.minGoals);
   const prevBest = loadBest();
   const isNewRecord = prevBest === null || state.score > prevBest;
   if (isNewRecord) saveBest(state.score);
-  state.lastResult = { score: state.score, hits: state.hits, grade, isNewRecord };
+  state.lastResult = { score: state.score, goals: state.goals, grade, isNewRecord };
   renderResult();
 }
 
 function renderResult() {
-  const { score, hits, grade, isNewRecord } = state.lastResult;
+  const { score, goals, grade, isNewRecord } = state.lastResult;
   stopLoop();
   state.phase = "result";
 
-  el.resultHits.textContent = `명중 ${hits} / ${CONFIG.SHOTS_PER_GAME}`;
+  el.resultHits.textContent = `골 ${goals} / ${CONFIG.SHOTS_PER_GAME}`;
   el.resultGrade.textContent = grade.label;
   el.resultGrade.className = `result-grade grade-${grade.key}`;
   el.resultRoni.className = `result-roni pose-${grade.key}`;
@@ -602,7 +537,7 @@ function renderResult() {
 
   showScreen("result");
 
-  const maxScore = CONFIG.SHOTS_PER_GAME * CONFIG.SCORE_PER_HIT;
+  const maxScore = CONFIG.SHOTS_PER_GAME * CONFIG.SCORE_PER_GOAL;
   el.accuracyFill.style.width = "0%";
   animateNumber(el.resultNumber, score, 700);
   requestAnimationFrame(() => { el.accuracyFill.style.width = `${(score / maxScore) * 100}%`; });
@@ -641,8 +576,6 @@ function loop(now) {
   if (state.lastTime === null) state.lastTime = now;
   const dt = Math.min((now - state.lastTime) / 1000, 0.05); // 프레임 드랍 보호
   state.lastTime = now;
-
-  updateSnackHop(now); // 슛 사이 이동 중일 때만 실제로 움직인다
 
   // 제한시간: 조준~파워 단계에서만 흐른다 (연출·이동·결과 중에는 정지)
   if (state.phase === "aim" || state.phase === "aiming" || state.phase === "power") {
@@ -717,12 +650,10 @@ screens.game.addEventListener("pointercancel", onPointerCancel);
 el.btnStart.addEventListener("click", startGame);
 el.btnRetry.addEventListener("click", startGame);
 
-// 리사이즈/회전: 골대·과자 레이아웃 재계산.
-// 과자 가로 위치는 비율(snackXR)로 저장돼 있어 자동으로 새 크기에 맞는다.
+// 리사이즈/회전: 골대 논리 영역 재계산
 window.addEventListener("resize", () => {
   if (state.phase === "landing" || state.phase === "result") return;
   layoutGame();
-  placeSnack();
 });
 
 /* ── 초기화 ──────────────────────────────── */

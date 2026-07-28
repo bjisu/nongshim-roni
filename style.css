@@ -409,49 +409,43 @@ body {
   100% { transform: scaleY(1) translateY(0); }
 }
 
-/* ── 타깃: 메론킥 과자 ── */
-.snack {
+/* ── 골키퍼 로니 (연출 전용 · 명중 판정과 무관) ──
+   골대 앞 중앙에 서 있고, 슈팅 결과에 따라 몸을 날린다 (골인 판정과 무관) */
+.keeper {
   position: absolute;
-  left: 0;
-  top: 0;
-  /* 크기는 JS(layoutGame)가 골대 폭 × SNACK_SIZE_RATIO로 지정 */
-  width: 60px;
-  height: 60px;
+  left: 50%;
+  bottom: -13%;   /* 골라인보다 살짝 앞(아래) = 원근상 골대 앞 */
+  height: 86%;    /* 골대 높이에 비례 */
+  transform: translateX(-50%);
+  z-index: 2;
+  pointer-events: none;
   will-change: transform;
-  filter: drop-shadow(0 5px 6px rgba(31, 63, 20, 0.4));
+  transition: transform 0.22s cubic-bezier(0.33, 1.2, 0.55, 1); /* 몸 날리는 짧은 런지 */
 }
-.snack img {
-  position: relative;
-  z-index: 1;
-  width: 100%;
+.keeper img {
   height: 100%;
-  object-fit: contain;   /* melonkick.png(139×320) 비율 유지 · 세로로 긴 스틱 */
+  width: auto;
+  display: block;
+  filter: drop-shadow(0 6px 7px rgba(31, 63, 20, 0.35));
 }
-/* 바닥 그림자 — 잔디에 서 있는 느낌 */
-.snack::after {
+/* 바닥 그림자 — 서 있는 느낌 */
+.keeper::after {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -4px;
-  width: 72%;
-  height: 12px;
+  bottom: -3px;
+  width: 78%;
+  height: 12%;
   transform: translateX(-50%);
-  background: radial-gradient(ellipse at center, rgba(31, 63, 20, 0.4) 0%, rgba(31, 63, 20, 0) 68%);
+  background: radial-gradient(ellipse at center, rgba(31, 63, 20, 0.38) 0%, rgba(31, 63, 20, 0) 68%);
   pointer-events: none;
+  z-index: -1;
 }
-/* melonkick.png 로드 실패 시 임시 도형 (메론킥 낱개 느낌의 크림 스틱) */
-.snack.no-img img { display: none; }
-.snack.no-img::before {
-  content: "";
-  position: absolute;
-  inset: 8% 22%;
-  background: linear-gradient(180deg, var(--cream-100) 0%, var(--cream-deep) 100%);
-  border: 3px solid var(--melon-400);
-  border-radius: 999px;
-  box-shadow:
-    inset 0 -4px 0 rgba(168, 217, 90, 0.5),
-    0 3px 6px rgba(31, 63, 20, 0.25);
-}
+/* 막기 자세: 기울며 이동 (transition이 부드럽게 이어줌) */
+.keeper.dive-left  { transform: translateX(-50%) translate(-42%, -8%) rotate(-14deg); }
+.keeper.dive-right { transform: translateX(-50%) translate(42%, -8%) rotate(14deg); }
+.keeper.dive-up    { transform: translateX(-50%) translateY(-22%); }
+
 /* ── 하단 슈팅 존: 공 + 조준 화살표 ──
    위치는 dvh 기준(짧은 화면에서도 골대·게이지와 안 겹침),
    크기는 화면 폭 비례 clamp. */
