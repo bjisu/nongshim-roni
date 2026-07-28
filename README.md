@@ -1,4 +1,4 @@
-# 메론킥 슛! ⚽
+# 슛돌이 로니! ⚽
 
 농심 메론킥 캐릭터 '로니'와 함께하는 원터치 반응속도 미니게임입니다.
 좌우로 움직이는 공이 **골대 중앙에 왔을 때 탭!** — 정확도(%)에 따라 로니가 리액션합니다.
@@ -56,7 +56,7 @@ npx serve .
    ```bash
    git init
    git add .
-   git commit -m "메론킥 슛! MVP"
+   git commit -m "슛돌이 로니! MVP"
    git branch -M main
    git remote add origin https://github.com/{내아이디}/roni-kick-timing.git
    git push -u origin main

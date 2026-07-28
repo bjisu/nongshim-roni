@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   메론킥 슛! — style.css
+   슛돌이 로니! — style.css
    농심 메론킥 패키지 무드 (멜론 그린 + 크림 + 그물망)
    ═══════════════════════════════════════════ */
 
@@ -259,7 +259,8 @@ body {
 .landing-title {
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: clamp(46px, 13.2vw, 66px);
+  /* "슛돌이 로니!" 7자(공백 포함)가 320px에서도 한 줄로 들어가는 크기 */
+  font-size: clamp(38px, 11.5vw, 58px);
   line-height: 1.28;
   letter-spacing: -0.02em;  /* Wanted Sans는 자간이 넓어 보여 살짝 좁힘 */
   white-space: nowrap;
@@ -328,19 +329,26 @@ body {
     calc(clamp(12px, 2dvh, 20px) + env(safe-area-inset-bottom));
 }
 
-/* ── 상단 HUD ── */
+/* ── 상단 HUD ──
+   좌(점수)·중(타이머)·우(남은 기회) 그리드 고정 배치.
+   숫자 폭이 바뀌어도 칩 크기/위치가 흔들리지 않는다. */
 .hud {
   width: 100%;
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
 }
+.hud-score { justify-self: start; }
+.hud-timer { justify-self: center; }
+.hud-shots { justify-self: end; }
 .hud-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
   line-height: 1;
+  height: clamp(34px, 9.4vw, 42px); /* 세 칩 높이 통일 (내용은 flex 세로 중앙) */
   font-family: var(--font-display);
   font-weight: 600;
   font-size: clamp(12px, 3.6vw, 16px);
@@ -349,12 +357,53 @@ body {
   background: var(--white);
   border: 3px solid var(--white);
   border-radius: 999px;
-  padding: 8px 16px;
+  padding: 0 14px;
   box-shadow:
     0 0 0 2px #a9c97e,
     0 6px 12px -6px rgba(90, 70, 30, 0.4);
 }
-.hud-chip strong { color: #e0703a; font-size: 1.15em; font-weight: 800; line-height: 1; }
+/* 좌우 칩은 같은 폭으로 대칭 (내용은 중앙 정렬)
+   최소 92px: 320px 화면에서도 그리드가 넘치지 않는 크기
+   최대 128px: 점수 4자리("1000") 내용보다 넉넉해 양쪽이 항상 같은 폭 */
+.hud-score,
+.hud-shots { min-width: clamp(92px, 30vw, 128px); }
+.hud-chip strong {
+  color: #e0703a;
+  font-size: 1.15em;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums; /* 같은 자릿수면 폭 완전 동일 */
+  text-align: center;
+}
+/* 최대 자릿수 기준 고정 폭 — 숫자가 바뀌어도 라벨이 밀리지 않는다.
+   (tabular 숫자는 ch(="0" 폭)보다 살짝 넓어 0.5ch 여유) */
+.hud-score strong { min-width: 4.5ch; }  /* "1000" */
+.hud-shots strong { min-width: 2.3ch; }  /* "x3" */
+
+/* ── 슈팅 제한시간 타이머 (상단 중앙 · 같은 스티커 스타일) ── */
+.hud-timer { gap: 6px; }
+.hud-timer strong { color: var(--melon-700); min-width: 2.3ch; } /* "10" */
+.timer-ring {
+  width: clamp(16px, 4.6vw, 20px);
+  height: clamp(16px, 4.6vw, 20px);
+  transform: rotate(-90deg); /* 12시 방향부터 줄어들게 */
+}
+.timer-ring circle { fill: none; stroke-width: 3.2; }
+.timer-ring-bg { stroke: var(--melon-100); }
+.timer-ring-fg {
+  stroke: var(--melon-500);
+  stroke-linecap: round;
+  stroke-dasharray: 50.27;   /* 2πr (r=8) */
+  stroke-dashoffset: 0;      /* JS가 남은 비율만큼 증가시킴 */
+}
+/* 3초 이하 경고: 빨간색 + 살짝 커졌다 작아지는 펄스 */
+.hud-timer.is-warn strong { color: #e2694d; }
+.hud-timer.is-warn .timer-ring-fg { stroke: #e2694d; }
+.hud-timer.is-warn { animation: timer-pulse 0.7s ease-in-out infinite; }
+@keyframes timer-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
 
 /* ── 골대 논리 영역 (과자 이동 범위 = 이 박스 안) ──
    위치/크기는 JS(layoutGame)가 배경 cover 크롭과 같은 수식으로
@@ -426,26 +475,6 @@ body {
     inset 0 -4px 0 rgba(168, 217, 90, 0.5),
     0 3px 6px rgba(31, 63, 20, 0.25);
 }
-/* 명중 점수 팝업 */
-.hit-popup {
-  position: absolute;
-  transform: translate(-50%, -100%);
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: clamp(22px, 7.5vw, 34px);
-  color: var(--orange-deep);
-  text-shadow: var(--logo-outline), 0 0.12em 0 rgba(120, 40, 8, 0.3);
-  pointer-events: none;
-  animation: popup-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  z-index: 3;
-}
-@keyframes popup-rise {
-  0%   { opacity: 0; margin-top: 10px; scale: 0.4; }
-  25%  { opacity: 1; scale: 1.2; }
-  60%  { opacity: 1; margin-top: -16px; scale: 1; }
-  100% { opacity: 0; margin-top: -34px; scale: 1; }
-}
-
 /* ── 하단 슈팅 존: 공 + 조준 화살표 ──
    위치는 dvh 기준(짧은 화면에서도 골대·게이지와 안 겹침),
    크기는 화면 폭 비례 clamp. */

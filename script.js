@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   메론킥 슛! — script.js
+   슛돌이 로니! — script.js
    v2.0 방향+파워 슈팅 게임 · Firebase/서버 미사용
    조작: ① 탭 → 조준 화살표 고정  ② 탭 → 파워 고정 + 슈팅
    한 게임 3회 슈팅 · 명중당 100점 · 최대 300점
@@ -13,6 +13,10 @@ const CONFIG = {
   SHOTS_PER_GAME: 3,          // 한 게임 슈팅 횟수
   SCORE_PER_HIT: 100,         // 명중당 점수
   COUNTDOWN_FROM: 3,          // 시작 카운트다운
+
+  /* ── 슈팅 제한시간 ── */
+  SHOT_TIME_LIMIT_MS: 10000,  // 슈팅 1회당 제한시간 (조준 가능 시점부터)
+  TIMER_WARN_MS: 3000,        // 이하로 남으면 빨간 경고 + 펄스
 
   /* ── 배경 이미지 속 골대 위치 (bg.png 기준 비율) ──
      골대 논리 영역은 JS가 background-size: cover와 같은 수식으로
@@ -82,11 +86,13 @@ const el = {
   gameInner: $(".game-inner"),
   hudScore: $("#hud-score"),
   hudShots: $("#hud-shots"),
+  hudTimerChip: $(".hud-timer"),
+  hudTimer: $("#hud-timer"),
+  timerRing: $("#timer-ring-fg"),
   goalArea: $("#goal-area"),
   goalNetFx: $("#goal-net-fx"),
   snack: $("#snack"),
   snackImg: $("#snack-img"),
-  hitPopup: $("#hit-popup"),
   aimArrow: $("#aim-arrow"),
   shootBall: $("#shoot-ball"),
   flyBall: $("#fly-ball"),
@@ -118,6 +124,7 @@ const state = {
   aimAngle: 0,        // 현재 화살표 각도 (도)
   aimPointerId: null, // 조준 중인 포인터 id
   aimPointer: null,   // 최신 포인터 좌표 {x, y} — pointermove는 저장만, 반영은 rAF에서
+  shotDeadline: 0,    // 이번 슈팅 마감 시각 (performance.now 기준 · 시작 시각 기준 계산이라 오차 누적 없음)
   power: 0,           // 현재 게이지 값 (0~1)
   powerDir: 1,        // 게이지 진행 방향
 
@@ -168,6 +175,60 @@ function renderLanding() {
 function renderHud() {
   el.hudScore.textContent = state.score;
   el.hudShots.textContent = `x${state.shotsLeft}`;
+}
+
+/* ── 슈팅 제한시간 타이머 ──────────────────
+   조준 가능 시점(beginAim)부터 카운트. 슈팅(파워 확정) 순간 멈추고,
+   다음 슈팅 준비 시 리셋. 결과 연출·과자 이동 중에는 돌지 않는다
+   (메인 루프에서 aim/aiming/power 단계에만 갱신). */
+const TIMER_RING_CIRC = 2 * Math.PI * 8; // SVG r=8 원주
+
+function renderTimer(remainMs) {
+  const frac = Math.max(0, remainMs / CONFIG.SHOT_TIME_LIMIT_MS);
+  el.timerRing.style.strokeDashoffset = String(TIMER_RING_CIRC * (1 - frac));
+  el.hudTimer.textContent = Math.max(0, Math.ceil(remainMs / 1000));
+  el.hudTimerChip.classList.toggle("is-warn", remainMs <= CONFIG.TIMER_WARN_MS);
+}
+
+function updateShotTimer(now) {
+  const remain = state.shotDeadline - now;
+  if (remain <= 0) {
+    renderTimer(0);
+    timeUp();
+    return;
+  }
+  renderTimer(remain);
+}
+
+/* 판정/타임아웃 플래시 문구 (동일 스타일·애니메이션) */
+function showFlash(text) {
+  el.judgeFlash.textContent = text;
+  el.judgeFlash.classList.remove("hidden");
+  el.judgeFlash.style.animation = "none";
+  void el.judgeFlash.offsetWidth;
+  el.judgeFlash.style.animation = "";
+  setTimeout(() => el.judgeFlash.classList.add("hidden"), 900);
+}
+
+/* 시간 초과: 기회 1 차감 → 다음 슈팅 또는 결과 */
+function timeUp() {
+  state.phase = "wait";
+  state.aimPointerId = null;
+  state.aimPointer = null;
+  el.aimArrow.classList.add("hidden");
+  el.powerWrap.classList.remove("is-active");
+  state.shotsLeft -= 1;
+  renderHud();
+
+  showFlash("시간 초과!");
+  el.phaseHint.textContent = "";
+
+  if (state.shotsLeft > 0) {
+    setTimeout(hopSnack, 250);
+    setTimeout(beginAim, CONFIG.NEXT_SHOT_DELAY_MS);
+  } else {
+    setTimeout(finishGame, CONFIG.RESULT_DELAY_MS);
+  }
 }
 
 /* ── 골대/과자 레이아웃 (반응형 핵심) ───────
@@ -280,6 +341,7 @@ function startGame() {
   el.goalNetFx.classList.remove("is-shaking");
   layoutGame();  // 골대·과자 크기를 현재 화면에 맞춤
   resetSnack();  // 첫 위치 랜덤
+  renderTimer(CONFIG.SHOT_TIME_LIMIT_MS); // 다시하기 포함 항상 풀 타이머로 초기화
   startLoop();
 
   let n = CONFIG.COUNTDOWN_FROM;
@@ -301,7 +363,7 @@ function startGame() {
 }
 
 /* ── 1단계: 드래그 조준 ──────────────────── */
-function beginAim() {
+function beginAim(resetTimer = true) {
   state.phase = "aim";        // 공 터치 대기
   state.aimAngle = 0;
   state.aimPointerId = null;
@@ -314,6 +376,10 @@ function beginAim() {
   state.powerDir = 1;
   placePowerCursor();
   el.phaseHint.textContent = "공을 잡고 조준하세요!";
+  if (resetTimer) {
+    state.shotDeadline = performance.now() + CONFIG.SHOT_TIME_LIMIT_MS;
+    renderTimer(CONFIG.SHOT_TIME_LIMIT_MS);
+  }
 }
 
 function ballCenter() {
@@ -475,14 +541,8 @@ function resolveShot() {
     state.hits += 1;
     state.score += CONFIG.SCORE_PER_HIT;
     el.flyBall.classList.add("hidden");
-    // 점수 팝업 (과자 현재 위치 위에)
-    const sp = snackPx();
-    el.hitPopup.style.left = `${sp.x}px`;
-    el.hitPopup.style.top = `${sp.y - state.snackSize * 0.8}px`;
-    el.hitPopup.classList.remove("hidden");
-    el.hitPopup.style.animation = "none";
-    void el.hitPopup.offsetWidth;
-    el.hitPopup.style.animation = "";
+    // "퍼펙트!" 플래시 — "시간 초과!"와 동일 스타일/애니메이션
+    showFlash("퍼펙트!");
     el.goalNetFx.classList.remove("is-shaking");
     void el.goalNetFx.offsetWidth;
     el.goalNetFx.classList.add("is-shaking");
@@ -501,17 +561,14 @@ function resolveShot() {
   }
   renderHud();
 
-  el.phaseHint.textContent = hit ? "🎯 명중! +100" :
+  el.phaseHint.textContent = hit ? "" :
     f.outcome === "short" ? "파워가 부족했어요…" :
     f.outcome === "over" ? "너무 세게 찼어요!" : "과자를 빗나갔어요!";
 
   if (state.shotsLeft > 0) {
     // 판정 리액션이 살짝 보인 뒤, 과자가 새 랜덤 위치로 스르륵 이동
     setTimeout(hopSnack, hit ? 420 : 180);
-    setTimeout(() => {
-      el.hitPopup.classList.add("hidden");
-      beginAim();
-    }, CONFIG.NEXT_SHOT_DELAY_MS);
+    setTimeout(beginAim, CONFIG.NEXT_SHOT_DELAY_MS);
   } else {
     setTimeout(finishGame, CONFIG.RESULT_DELAY_MS);
   }
@@ -531,7 +588,6 @@ function renderResult() {
   const { score, hits, grade, isNewRecord } = state.lastResult;
   stopLoop();
   state.phase = "result";
-  el.hitPopup.classList.add("hidden");
 
   el.resultHits.textContent = `명중 ${hits} / ${CONFIG.SHOTS_PER_GAME}`;
   el.resultGrade.textContent = grade.label;
@@ -584,6 +640,11 @@ function loop(now) {
   state.lastTime = now;
 
   updateSnackHop(now); // 슛 사이 이동 중일 때만 실제로 움직인다
+
+  // 제한시간: 조준~파워 단계에서만 흐른다 (연출·이동·결과 중에는 정지)
+  if (state.phase === "aim" || state.phase === "aiming" || state.phase === "power") {
+    updateShotTimer(now);
+  }
 
   if (state.phase === "aiming") applyAim(); // 프레임당 1회만 화살표 갱신
   else if (state.phase === "power") updatePower(dt);
@@ -640,7 +701,7 @@ function onPointerUp(e) {
 
 function onPointerCancel(e) {
   if (state.phase !== "aiming" || e.pointerId !== state.aimPointerId) return;
-  beginAim(); // 조준 취소 → 다시 공 터치 대기
+  beginAim(false); // 조준 취소 → 다시 공 터치 대기 (타이머는 그대로 진행)
 }
 
 // passive: false — preventDefault로 드래그 중 스크롤/당겨서 새로고침 차단 보장

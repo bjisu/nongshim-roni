@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>메론킥 슛!</title>
+  <title>슛돌이 로니!</title>
   <meta name="description" content="방향과 파워를 맞춰 골대 안 메론킥을 맞혀라! 로니와 함께하는 슈팅 게임" />
-  <meta property="og:title" content="메론킥 슛!" />
+  <meta property="og:title" content="슛돌이 로니!" />
   <meta property="og:description" content="방향과 파워를 맞춰 메론킥을 명중시켜라! 3번의 기회, 최대 300점!" />
   <meta name="theme-color" content="#C8E86B" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>" />
@@ -25,7 +25,7 @@
           <img src="assets/images/roni.png?v=3" alt="로니" class="landing-roni" draggable="false" />
           <img src="assets/images/ball.png?v=2" alt="" class="landing-ball" draggable="false" />
         </div>
-        <h1 class="landing-title">메론킥 슛!</h1>
+        <h1 class="landing-title">슛돌이 로니!</h1>
         <p class="landing-sub">방향과 파워를 맞춰 메론킥을 명중시켜라!</p>
         <p id="best-score-label" class="best-score hidden">
           🏆 내 최고기록 <strong id="best-score-value">0점</strong>
@@ -41,7 +41,14 @@
         <!-- 상단 HUD -->
         <div class="hud">
           <div class="hud-chip hud-score">점수 <strong id="hud-score">0</strong></div>
-          <div class="hud-chip hud-shots">남은 기회 <strong id="hud-shots">x3</strong></div>
+          <div class="hud-chip hud-timer" aria-label="남은 시간">
+            <svg class="timer-ring" viewBox="0 0 20 20" aria-hidden="true">
+              <circle class="timer-ring-bg" cx="10" cy="10" r="8" />
+              <circle id="timer-ring-fg" class="timer-ring-fg" cx="10" cy="10" r="8" />
+            </svg>
+            <strong id="hud-timer">10</strong>
+          </div>
+          <div class="hud-chip hud-shots">기회 <strong id="hud-shots">x3</strong></div>
         </div>
 
         <!-- 골대 영역 (배경 이미지의 골대 위치에 맞춘 논리 영역) -->
@@ -50,7 +57,6 @@
           <div id="snack" class="snack">
             <img id="snack-img" src="assets/images/melonkick.png" alt="메론킥 과자" draggable="false" />
           </div>
-          <div id="hit-popup" class="hit-popup hidden">+100</div>
         </div>
 
         <!-- 하단 슈팅 존: 공 + 조준 화살표 -->
