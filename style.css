@@ -312,6 +312,7 @@ body {
      경로는 style.css(프로젝트 루트) 기준. */
   background: url("assets/images/bg.png") center / cover no-repeat;
   cursor: pointer;
+  touch-action: none; /* 드래그 조준 중 브라우저 스크롤/당겨서 새로고침 차단 */
 }
 
 .game-inner {

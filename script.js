@@ -117,6 +117,7 @@ const state = {
 
   aimAngle: 0,        // 현재 화살표 각도 (도)
   aimPointerId: null, // 조준 중인 포인터 id
+  aimPointer: null,   // 최신 포인터 좌표 {x, y} — pointermove는 저장만, 반영은 rAF에서
   power: 0,           // 현재 게이지 값 (0~1)
   powerDir: 1,        // 게이지 진행 방향
 
@@ -304,6 +305,7 @@ function beginAim() {
   state.phase = "aim";        // 공 터치 대기
   state.aimAngle = 0;
   state.aimPointerId = null;
+  state.aimPointer = null;
   el.shootBall.style.visibility = "";
   el.flyBall.classList.add("hidden");
   el.aimArrow.classList.add("hidden");
@@ -319,11 +321,15 @@ function ballCenter() {
   return { x: b.left + b.width / 2, y: b.top + b.height / 2, r: b.width / 2 };
 }
 
-/* 손가락(포인터) 위치를 향해 화살표 회전 · 각도는 좌우 제한 */
-function aimTowardPointer(e) {
+/* 최신 포인터 좌표를 향해 화살표 회전 · 각도는 좌우 제한.
+   pointermove마다 직접 호출하지 않고 메인 rAF 루프에서 프레임당 1회만
+   실행한다 (이벤트 폭주 시에도 부드럽게). 회전은 transform만 사용. */
+function applyAim() {
+  const p = state.aimPointer;
+  if (!p) return;
   const c = ballCenter();
-  const dx = e.clientX - c.x;
-  const dy = c.y - e.clientY;                 // 위쪽이 +
+  const dx = p.x - c.x;
+  const dy = c.y - p.y;                       // 위쪽이 +
   // 포인터가 공보다 아래면 dy를 최소 1로 눌러 각도 폭주 방지
   let deg = (Math.atan2(dx, Math.max(dy, 1)) * 180) / Math.PI;
   deg = Math.min(Math.max(deg, -CONFIG.AIM_MAX_ANGLE), CONFIG.AIM_MAX_ANGLE);
@@ -579,7 +585,8 @@ function loop(now) {
 
   updateSnackHop(now); // 슛 사이 이동 중일 때만 실제로 움직인다
 
-  if (state.phase === "power") updatePower(dt);
+  if (state.phase === "aiming") applyAim(); // 프레임당 1회만 화살표 갱신
+  else if (state.phase === "power") updatePower(dt);
   else if (state.phase === "fly") updateFly(now);
 
   state.rafId = requestAnimationFrame(loop);
@@ -605,9 +612,11 @@ function onPointerDown(e) {
     if (Math.hypot(e.clientX - c.x, e.clientY - c.y) <= c.r * CONFIG.BALL_GRAB_RADIUS) {
       state.phase = "aiming";
       state.aimPointerId = e.pointerId;
+      state.aimPointer = { x: e.clientX, y: e.clientY };
       el.aimArrow.classList.remove("hidden");
-      aimTowardPointer(e);
+      applyAim(); // 첫 프레임은 즉시 반영
       el.phaseHint.textContent = "놓으면 방향이 고정돼요!";
+      // 손가락이 공 밖으로 나가도 추적 유지
       try { screens.game.setPointerCapture(e.pointerId); } catch (_) { /* 합성 이벤트 등 */ }
     }
   } else if (state.phase === "power") {
@@ -618,7 +627,8 @@ function onPointerDown(e) {
 function onPointerMove(e) {
   if (state.phase !== "aiming" || e.pointerId !== state.aimPointerId) return;
   e.preventDefault();
-  aimTowardPointer(e);
+  // 좌표만 저장 — 실제 회전은 rAF 루프(applyAim)에서 프레임당 1회
+  state.aimPointer = { x: e.clientX, y: e.clientY };
 }
 
 function onPointerUp(e) {
@@ -633,8 +643,9 @@ function onPointerCancel(e) {
   beginAim(); // 조준 취소 → 다시 공 터치 대기
 }
 
-screens.game.addEventListener("pointerdown", onPointerDown);
-screens.game.addEventListener("pointermove", onPointerMove);
+// passive: false — preventDefault로 드래그 중 스크롤/당겨서 새로고침 차단 보장
+screens.game.addEventListener("pointerdown", onPointerDown, { passive: false });
+screens.game.addEventListener("pointermove", onPointerMove, { passive: false });
 screens.game.addEventListener("pointerup", onPointerUp);
 screens.game.addEventListener("pointercancel", onPointerCancel);
 
