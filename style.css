@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════
    슛돌이 로니! — style.css
-   농심 메론킥 패키지 무드 (멜론 그린 + 크림 + 그물망)
+   드래그 조준 슈팅 게임 · 배경 일러스트 + 흰 스티커 UI 톤
    ═══════════════════════════════════════════ */
 
 :root {
@@ -24,17 +24,12 @@
   /* ── 포인트 (CTA 전용 웜 오렌지) ── */
   --orange: #ff9a3c;
   --orange-deep: #ef5b25;
-  --orange-shadow: #bf4114;
 
-  --sky-1: #b6e9ff;
-  --sky-2: #e9faff;
   --ink: #23361a;
   --ink-soft: #5b7049;
   --white: #ffffff;
 
   --radius-lg: 28px;
-  --radius-md: 18px;
-  --shadow-card: 0 18px 40px -18px rgba(31, 63, 20, 0.5);
 
   /* ── 폰트: Wanted Sans (CDN 실패 시 시스템 폰트 폴백) ──
      Jua 같은 디스플레이 폰트가 아니므로 위계는 굵기로 잡는다:
@@ -57,8 +52,6 @@
     0 -0.065em 0 var(--white), 0.025em -0.06em 0 var(--white),
     0.046em -0.046em 0 var(--white), 0.06em -0.025em 0 var(--white);
 
-  /* ── 멜론 그물망(네트) 타일 · 인라인 SVG ── */
-  --net-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cg fill='none' stroke='%232f5c1e' stroke-opacity='0.5' stroke-width='2.2' stroke-linecap='round' transform='translate(0 4)'%3E%3Cpath d='M0 0 Q17.5 -9 35 0 T70 0 T105 0 T140 0'/%3E%3Cpath d='M0 35 Q17.5 26 35 35 T70 35 T105 35 T140 35'/%3E%3Cpath d='M0 70 Q17.5 61 35 70 T70 70 T105 70 T140 70'/%3E%3Cpath d='M0 105 Q17.5 96 35 105 T70 105 T105 105 T140 105'/%3E%3Cpath d='M0 140 Q17.5 131 35 140 T70 140 T105 140 T140 140'/%3E%3Cpath d='M0 0 Q-9 17.5 0 35 T0 70 T0 105 T0 140'/%3E%3Cpath d='M35 0 Q26 17.5 35 35 T35 70 T35 105 T35 140'/%3E%3Cpath d='M70 0 Q61 17.5 70 35 T70 70 T70 105 T70 140'/%3E%3Cpath d='M105 0 Q96 17.5 105 35 T105 70 T105 105 T105 140'/%3E%3Cpath d='M140 0 Q131 17.5 140 35 T140 70 T140 105 T140 140'/%3E%3C/g%3E%3Cg fill='none' stroke='%23fff6d8' stroke-width='4.5' stroke-linecap='round'%3E%3Cpath d='M0 0 Q17.5 -9 35 0 T70 0 T105 0 T140 0'/%3E%3Cpath d='M0 35 Q17.5 26 35 35 T70 35 T105 35 T140 35'/%3E%3Cpath d='M0 70 Q17.5 61 35 70 T70 70 T105 70 T140 70'/%3E%3Cpath d='M0 105 Q17.5 96 35 105 T70 105 T105 105 T140 105'/%3E%3Cpath d='M0 140 Q17.5 131 35 140 T70 140 T105 140 T140 140'/%3E%3Cpath d='M0 0 Q-9 17.5 0 35 T0 70 T0 105 T0 140'/%3E%3Cpath d='M35 0 Q26 17.5 35 35 T35 70 T35 105 T35 140'/%3E%3Cpath d='M70 0 Q61 17.5 70 35 T70 70 T70 105 T70 140'/%3E%3Cpath d='M105 0 Q96 17.5 105 35 T105 70 T105 105 T105 140'/%3E%3Cpath d='M140 0 Q131 17.5 140 35 T140 70 T140 105 T140 140'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -218,7 +211,6 @@ body {
   justify-content: center;
 }
 
-.landing-deco { display: none; } /* 배경 일러스트로 대체 */
 
 .landing-inner {
   position: relative;

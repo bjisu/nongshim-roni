@@ -1,76 +1,74 @@
 # 슛돌이 로니! ⚽
 
-농심 메론킥 캐릭터 '로니'와 함께하는 원터치 반응속도 미니게임입니다.
-좌우로 움직이는 공이 **골대 중앙에 왔을 때 탭!** — 정확도(%)에 따라 로니가 리액션합니다.
+농심 메론킥 캐릭터 '로니'와 함께하는 드래그 조준 슈팅 미니게임입니다.
+공을 잡고 드래그해 방향을 정하고, 왕복하는 파워 게이지를 탭해 슈팅 —
+골대 안에서 움직이는 **메론킥 과자를 맞히면 100점!**
 
-- 서버/DB/Firebase 없이 **완전 정적 사이트** (HTML/CSS/JS만 사용)
-- 메론킥 과자 패키지 무드 디자인 (멜론 그린 + 크림 + 그물망 패턴, 외부 이미지 없이 인라인 SVG/캔버스로 구현)
-- 최고기록은 `localStorage`에 기기별로 저장
+- 서버/DB 없이 **완전 정적 사이트** (HTML/CSS/JS만 사용, 외부 라이브러리 없음)
+- 배경 일러스트 + 흰 스티커 톤 UI, Wanted Sans Variable 웹폰트(jsdelivr CDN)
+- 최고기록(총점)은 `localStorage`에 기기별로 저장
+
+## 게임 규칙
+
+1. **조준** — 공을 터치한 채 드래그하면 화살표가 손가락을 따라 회전(좌우 ±38° 제한), 놓으면 방향 고정
+2. **파워** — 초록→노랑→빨강 게이지가 왕복. 탭하는 순간의 파워로 슈팅
+   - 너무 약하면 골대까지 못 가고, 너무 강하면 골대 위로 넘어감 (적정 구간 존재)
+3. **판정** — 공이 도착한 위치가 그 순간의 과자 위치와 겹치면 명중(+100), 과자는 슛마다 골대 바닥의 새 랜덤 가로 위치로 이동
+4. **제한시간** — 슈팅 1회당 10초. 초과하면 기회 1 차감 (3초 이하부터 빨간 경고)
+5. **결과** — 3회 슈팅 후 총점(최대 300)·명중 횟수·로니 리액션 표시
 
 ## 폴더 구조
 
 ```
-roni-kick-timing/
-├── index.html        # 랜딩/게임/결과 3개 화면
-├── style.css         # 전체 스타일 (모바일 우선, 데스크톱은 중앙 정렬 / :root에 메론킥 팔레트·그물망 타일)
-├── script.js         # 게임 로직 (상단 CONFIG에서 난이도·등급 조절)
+nongshim-roni/
+├── index.html        # 랜딩 / 게임 / 결과 3개 화면 + 가로 모드 안내
+├── style.css         # 전체 스타일 (모바일 우선 반응형, 480px 중앙 프레임)
+├── script.js         # 게임 로직 (상단 CONFIG에서 난이도·연출 조절)
 ├── assets/images/
-│   ├── roni.png      # 로니 캐릭터 (배경 제거본)
-│   └── ball.png      # 축구공
+│   ├── bg.png        # 배경 일러스트 (골대 포함 · 골대 좌표는 JS가 cover 크롭 수식으로 정렬)
+│   ├── roni.png      # 로니 캐릭터
+│   ├── ball.png      # 축구공
+│   └── melonkick.png # 타깃 과자
 └── README.md
 ```
 
-## 로컬에서 실행하기 (Cursor)
-
-이 폴더를 Cursor로 열고, 아래 중 하나로 로컬 서버를 띄우면 됩니다.
-(파일을 더블클릭해 열어도 동작하지만, 로컬 서버 실행을 권장합니다.)
+## 로컬 실행
 
 ```bash
 # 방법 1: Python
-python3 -m http.server 8000
+python -m http.server 8000
 
 # 방법 2: Node
 npx serve .
 ```
 
-브라우저에서 `http://localhost:8000` 접속 → 개발자 도구(F12) → 기기 툴바에서 모바일 뷰(예: iPhone)로 확인하세요.
+브라우저에서 `http://localhost:8000` 접속 → 개발자 도구(F12) 기기 툴바에서 모바일 뷰(390×844 등)로 확인하세요.
 
 ## 게임 튜닝
 
-`script.js` 맨 위 `CONFIG` 상수만 수정하면 됩니다.
+`script.js` 맨 위 `CONFIG` 상수만 수정하면 됩니다. 주요 항목:
 
 | 항목 | 설명 |
 |---|---|
-| `BALL_SPEED_RATIO` | 공 속도 (트랙폭 대비 초당 비율, 기본 0.6) — 높일수록 어려움 |
-| `INPUT_LOCK_MS` | 탭 후 입력 잠금 시간 |
-| `GRADES` | 등급 커트라인/문구/코멘트 |
+| `SHOTS_PER_GAME` / `SCORE_PER_HIT` | 슈팅 횟수 / 명중당 점수 |
+| `SHOT_TIME_LIMIT_MS` / `TIMER_WARN_MS` | 슈팅 제한시간 / 빨간 경고 시점 |
+| `AIM_MAX_ANGLE` | 조준 각도 제한 (도) |
+| `POWER_SWEEP_SPEED` | 파워 게이지 왕복 속도 |
+| `POWER_GOAL_MIN` / `POWER_GOAL_MAX` | 골대에 도달하는 적정 파워 구간 |
+| `HIT_RADIUS_RATIO` | 명중 판정 반경 (과자 크기 대비 배율) |
+| `SNACK_MOVE_MS` / `SNACK_MIN_JUMP_RATIO` | 과자 이동 시간 / 최소 이동 거리 |
+| `BG_GOAL_RECT` | 배경 이미지 속 골대 영역 (이미지 교체 시 여기만 맞추면 됨) |
+| `GRADES` | 명중 횟수별 결과 등급·코멘트 |
 | `STORAGE_KEY` | 최고기록 localStorage 키 |
 
-골대 존의 시각적 너비는 `style.css`의 `--goal-zone-width`(기본 26%)로 조절합니다. (판정은 존이 아니라 중앙 거리 기반 % 공식이라 시각 요소만 바뀝니다.)
+크기·거리 값은 전부 화면/골대 대비 **비율**이라 어떤 기기에서도 난이도가 동일합니다.
 
-## GitHub Pages 배포
+## 배포 (Vercel)
 
-1. GitHub에 새 저장소 생성 (예: `roni-kick-timing`)
-2. 이 폴더 내용을 push
+프로덕션: https://nongshim-roni.vercel.app
 
-   ```bash
-   git init
-   git add .
-   git commit -m "슛돌이 로니! MVP"
-   git branch -M main
-   git remote add origin https://github.com/{내아이디}/roni-kick-timing.git
-   git push -u origin main
-   ```
+```bash
+vercel --prod
+```
 
-3. 저장소 **Settings → Pages → Source**를 `main` 브랜치 `/ (root)`로 지정
-4. 1~2분 후 `https://{내아이디}.github.io/roni-kick-timing/` 접속 확인
-5. 이후 수정 사항은 `main`에 push하면 자동 재배포
-
-## 완료 기준 체크 (PRD 11)
-
-- [x] 랜딩 → 게임 → 결과 3단계 화면 전환
-- [x] PRD 5.2 공식 그대로 정확도 계산
-- [x] 등급별(퍼펙트킥/굿샷/헛발질) 로니 리액션 분기
-- [x] 최고기록 localStorage 유지
-- [ ] GitHub Pages 배포 (위 절차대로 push 후 확인)
-- [ ] 실기기(iOS Safari / Android Chrome) 최종 확인
+GitHub `main` 브랜치: https://github.com/bjisu/nongshim-roni
