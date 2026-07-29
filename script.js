@@ -231,9 +231,10 @@ function updateShotTimer(now) {
   renderTimer(remain);
 }
 
-/* 판정/타임아웃 플래시 문구 (동일 스타일·애니메이션) */
-function showFlash(text) {
+/* 판정/타임아웃 플래시 문구 (동일 스타일·애니메이션 · variant로 색만 변경) */
+function showFlash(text, variant = "") {
   el.judgeFlash.textContent = text;
+  el.judgeFlash.classList.toggle("flash-save", variant === "save");
   el.judgeFlash.classList.remove("hidden");
   el.judgeFlash.style.animation = "none";
   void el.judgeFlash.offsetWidth;
@@ -510,7 +511,7 @@ function resolveShot() {
     // 골키퍼 세이브: 공이 골키퍼에게 잡힘
     state.lastSaveDir = state.keeperDir; // 다음 슈팅에서 같은 방향 반복 확률 낮춤
     el.flyBall.classList.add("hidden");
-    showFlash("막혔다!");
+    showFlash("막혔다!", "save"); // 세이브는 빨간색
   } else {
     // 그 외 노골: 플래시 없이 하단 힌트로만 안내
     if (f.outcome !== "over") {
