@@ -2,11 +2,13 @@
    슛돌이 로니! — script.js
    드래그 조준 슈팅 게임 · 정적 사이트 (서버/외부 라이브러리 없음)
 
-   조작: ① 공을 잡고 드래그 → 조준 화살표가 손가락을 따라 회전, 놓으면 방향 고정
-         ② 왕복하는 파워 게이지를 탭 → 파워 고정 + 슈팅
-   규칙: 방향이 골대 안 + 파워가 적정 구간이면 골인(+100점)
-         슈팅 1회당 10초 제한시간 · 한 게임 3회 슈팅 · 최대 300점
-         골키퍼 로니는 연출 전용(골이면 반대로, 빗나가면 공 쪽으로 다이빙)
+   조작: 공을 잡고 드래그로 조준(화살표가 손가락을 따라 회전),
+         손을 떼는 순간 그 시점의 파워 선 위치가 파워로 확정되며 즉시 슈팅.
+         (파워 선은 항상 왕복 · 드래그가 아주 짧으면 취소)
+   규칙: 방향이 골대 안 + 파워가 적정 구간이면 골 기회.
+         단, 골키퍼 로니가 좌/중/우 중 랜덤 방향으로 몸을 날리며
+         공 방향과 같으면 세이브(노골), 다르면 골인(+100점).
+         슈팅 1회당 10초 제한시간 · 한 게임 7회 슈팅 · 최대 700점
    ═══════════════════════════════════════════ */
 
 "use strict";
@@ -14,8 +16,8 @@
 /* ── 조정 가능한 상수 (난이도/연출 튜닝은 전부 여기서) ── */
 const CONFIG = {
   /* ── 게임 구조 ── */
-  SHOTS_PER_GAME: 3,          // 한 게임 슈팅 횟수
-  SCORE_PER_GOAL: 100,        // 골인당 점수
+  SHOTS_PER_GAME: 7,          // 한 게임 슈팅 횟수
+  SCORE_PER_GOAL: 100,        // 골인당 점수 (최대 = SHOTS_PER_GAME × 100)
   COUNTDOWN_FROM: 3,          // 시작 카운트다운
 
   /* ── 슈팅 제한시간 ── */
@@ -35,9 +37,13 @@ const CONFIG = {
   AIM_MAX_ANGLE: 38,          // 조준 각도 제한 (도 · 좌우 대칭 · 골대를 크게 벗어나지 않는 범위)
   AIM_SPREAD_RATIO: 1.15,     // 최대 각도일 때 수평 도달 거리 = 골대 폭 절반 × 이 값
   BALL_GRAB_RADIUS: 2.6,      // 공 반지름 × 이 값 안을 터치하면 조준 시작 (손가락 오차 허용)
+  MIN_DRAG_TO_SHOOT_PX: 18,   // 드래그 거리가 이 미만이면(살짝 스침) 슈팅하지 않고 취소
 
-  /* ── 2단계: 파워 게이지 ── */
-  POWER_SWEEP_SPEED: 1.1,     // 게이지 왕복 속도 (1초당 편도 횟수)
+  /* ── 파워 게이지 (타이밍) ──
+     인디케이터 선이 좌↔우 일정 속도로 왕복(rAF · 연출 중 제외 항상).
+     조준에서 손을 떼는 순간의 실제 선 위치가 파워로 확정된다.
+     골인 가능 구간(POWER_GOAL_MIN~MAX)은 내부 판정 로직에만 존재. */
+  POWER_ROUNDTRIP_MS: 1200,   // 인디케이터 1왕복(좌→우→좌) 시간 — 짧을수록 어려움
 
   /* ── 슛 비행 연출 (거리 값은 화면 높이 대비 비율) ── */
   FLY_DURATION_MS: 700,       // 비행 시간
@@ -47,13 +53,17 @@ const CONFIG = {
   SHORT_LAND_MARGIN_RATIO: 0.032, // 파워 부족 시 골대 아래 착지 여유 (화면 높이 대비)
   OVER_RISE_RATIO: 0.105,     // 파워 초과 시 골대 상단 위로 솟는 높이 (화면 높이 대비)
 
-  /* ── 골키퍼 로니 (연출 전용 · 골인 판정과 무관) ── */
+  /* ── 골키퍼 로니 (세이브 판정 참여) ──
+     슈팅 확정 → 골키퍼가 좌/중/우 중 랜덤 방향으로 다이빙.
+     공 방향 구간과 같으면 세이브(노골), 다르면 골 기회 유지. */
   KEEPER_IMG_VERSION: "v=1",  // 이미지 캐시버스터 (이미지 교체 시 올리기)
-  KEEPER_ZONE_SPLIT: 1 / 3,   // 정규화 조준각(-1~1)의 구간 경계 — |각| ≤ 이 값이면 중앙(up), 넘으면 좌/우 (기본 3등분)
+  KEEPER_ZONE_SPLIT: 1 / 3,   // 정규화 조준각(-1~1)의 공 방향 구간 경계 — |각| ≤ 이 값이면 중앙(up), 넘으면 좌/우 (3등분)
+  KEEPER_DIVE_WEIGHTS: { left: 1, up: 1, right: 1 }, // 방향 선택 가중치 (기본 균등 1/3)
+  KEEPER_REPEAT_PENALTY: 0.5, // 직전에 "막았던" 방향을 또 고를 가중치 배율 (1 = 페널티 없음)
 
   /* ── 판정: 골인 ──
-     골인 = 방향이 골대 안쪽 범위 AND 파워가 적정 구간.
-     그 외(옆 빗나감/파워 부족/파워 과다/시간 초과)는 전부 노골. */
+     골인 = 방향이 골대 안쪽 범위 AND 파워가 적정 구간 AND 골키퍼가 못 막음.
+     그 외(세이브/옆 빗나감/파워 부족/파워 과다/시간 초과)는 전부 노골. */
   GOAL_DIRECTION_RATIO: 0.85, // |정규화 조준각| ≤ 이 값이면 방향이 골대 안 (1 ≈ 골포스트)
   POWER_GOAL_MIN: 0.40,       // 파워 적정 구간 하한 (게이지의 40%) — 미만이면 골대까지 못 감
   POWER_GOAL_MAX: 0.85,       // 파워 적정 구간 상한 (게이지의 85%) — 초과면 골대 위로 넘어감
@@ -64,10 +74,10 @@ const CONFIG = {
 
   STORAGE_KEY: "roni_best_score", // 최고기록 (총점 기준 · 기존 키 재활용)
 
-  /* ── 결과 등급 (골 수 기준) ── */
+  /* ── 결과 등급 (골 수 기준 · 경계값 = minGoals) ── */
   GRADES: [
-    { minGoals: 3, key: "perfect", label: "해트트릭!", comment: "3골 전부 성공! 로니 골키퍼도 두 손 들었어요!" },
-    { minGoals: 1, key: "good",    label: "굿샷!",     comment: "좋아요! 방향과 파워를 다듬으면 해트트릭도 가능해요." },
+    { minGoals: 6, key: "perfect", label: "퍼펙트!",  comment: "환상적인 슈팅! 로니 골키퍼도 두 손 들었어요!" },
+    { minGoals: 3, key: "good",    label: "굿샷!",    comment: "좋아요! 방향과 파워를 다듬으면 퍼펙트도 가능해요." },
     { minGoals: 0, key: "miss",    label: "아쉬워요…", comment: "괜찮아요! 파워는 게이지 40~85% 구간을 노려보세요." },
   ],
 };
@@ -114,7 +124,7 @@ const el = {
 
 /* ── 상태 ────────────────────────────────── */
 const state = {
-  phase: "landing",   // landing | countdown | aim | aiming | power | fly | wait | result
+  phase: "landing",   // landing | countdown | aim | aiming | fly | wait | result
   score: 0,
   shotsLeft: CONFIG.SHOTS_PER_GAME,
   goals: 0,           // 골인 수
@@ -122,9 +132,13 @@ const state = {
   aimAngle: 0,        // 현재 화살표 각도 (도)
   aimPointerId: null, // 조준 중인 포인터 id
   aimPointer: null,   // 최신 포인터 좌표 {x, y} — pointermove는 저장만, 반영은 rAF에서
+  aimStart: null,     // 드래그 시작 좌표 (짧은 스침 취소 판정용)
   shotDeadline: 0,    // 이번 슈팅 마감 시각 (performance.now 기준 · 시작 시각 기준 계산이라 오차 누적 없음)
   power: 0,           // 현재 게이지 값 (0~1)
   powerDir: 1,        // 게이지 진행 방향
+
+  keeperDir: null,    // 이번 슈팅에서 골키퍼가 날린 방향 (left | up | right)
+  lastSaveDir: null,  // 직전에 세이브에 성공한 방향 (반복 선택 페널티용)
 
   fly: null,          // 비행 중 데이터 { from, to, start, outcome, ... }
   rafId: null,
@@ -142,11 +156,11 @@ function saveBest(score) {
   try { localStorage.setItem(CONFIG.STORAGE_KEY, String(score)); } catch (_) { /* 시크릿 모드 등 */ }
 }
 
-/* ── 골키퍼 (연출 전용) ────────────────────
-   조준·파워 중엔 default. 슈팅 순간(판정 확정 후):
-   골인 → 반드시 공과 "다른" 방향으로 다이빙(못 막은 연출),
-   노골(옆 빗나감/파워 부족/과다) → 준비 자세(default) 유지.
-   다음 슈팅 준비 시 default 복귀. 골인 판정에는 관여하지 않는다. */
+/* ── 골키퍼 ────────────────────────────────
+   조준·파워 중엔 default. 슈팅 순간 좌/중/우 중 가중 랜덤으로 다이빙:
+   공 방향 구간과 같으면 세이브(노골), 다르면 골 기회 유지.
+   직전에 막았던 방향은 KEEPER_REPEAT_PENALTY만큼 덜 고른다 (운빨 완화).
+   다음 슈팅 준비 시 default 복귀. */
 const keeperSrc = (pose) => `assets/images/roni_${pose}.png?${CONFIG.KEEPER_IMG_VERSION}`;
 // 4장 모두 프리로드 — 전환 순간 로딩 딜레이/깜빡임 방지
 ["default", "left", "right", "up"].forEach((p) => { new Image().src = keeperSrc(p); });
@@ -155,6 +169,25 @@ function setKeeperPose(pose) {
   el.keeperImg.src = keeperSrc(pose);
   el.keeper.classList.remove("dive-left", "dive-right", "dive-up");
   if (pose !== "default") el.keeper.classList.add(`dive-${pose}`);
+}
+
+/* 골키퍼 다이빙 방향 가중 랜덤 선택 */
+function pickKeeperDir() {
+  const w = { ...CONFIG.KEEPER_DIVE_WEIGHTS };
+  if (state.lastSaveDir) w[state.lastSaveDir] *= CONFIG.KEEPER_REPEAT_PENALTY;
+  const total = w.left + w.up + w.right;
+  let r = Math.random() * total;
+  for (const dir of ["left", "up", "right"]) {
+    if ((r -= w[dir]) < 0) return dir;
+  }
+  return "up";
+}
+
+/* 공의 방향 구간 (좌/중/우) — 정규화 조준각 기준 */
+function ballZoneOf(normalizedAngle) {
+  if (normalizedAngle < -CONFIG.KEEPER_ZONE_SPLIT) return "left";
+  if (normalizedAngle > CONFIG.KEEPER_ZONE_SPLIT) return "right";
+  return "up";
 }
 
 /* ── 화면 전환 ───────────────────────────── */
@@ -259,6 +292,8 @@ function startGame() {
   state.goals = 0;
   state.shotsLeft = CONFIG.SHOTS_PER_GAME;
   state.fly = null;
+  state.keeperDir = null;
+  state.lastSaveDir = null;
   renderHud();
   el.judgeFlash.classList.add("hidden");
   el.flyBall.classList.add("hidden");
@@ -301,7 +336,7 @@ function beginAim(resetTimer = true) {
   state.powerDir = 1;
   placePowerCursor();
   setKeeperPose("default"); // 다음 슈팅 준비 → 준비 자세 복귀
-  el.phaseHint.textContent = "공을 잡고 조준하세요!";
+  el.phaseHint.textContent = "드래그로 조준하고, 놓는 순간 슛!";
   if (resetTimer) {
     state.shotDeadline = performance.now() + CONFIG.SHOT_TIME_LIMIT_MS;
     renderTimer(CONFIG.SHOT_TIME_LIMIT_MS);
@@ -329,17 +364,10 @@ function applyAim() {
   el.aimArrow.style.transform = `translateX(-50%) rotate(${deg}deg)`;
 }
 
-/* ── 2단계: 파워 ─────────────────────────── */
-function beginPower() {
-  state.phase = "power";
-  state.power = 0;
-  state.powerDir = 1;
-  el.powerWrap.classList.add("is-active");
-  el.phaseHint.textContent = "탭해서 파워를 정해요!";
-}
-
 function updatePower(dt) {
-  state.power += state.powerDir * CONFIG.POWER_SWEEP_SPEED * dt;
+  // 편도(0→1) 속도 = 왕복 시간의 절반 기준
+  const speed = 2000 / CONFIG.POWER_ROUNDTRIP_MS;
+  state.power += state.powerDir * speed * dt;
   if (state.power >= 1) { state.power = 1; state.powerDir = -1; }
   if (state.power <= 0) { state.power = 0; state.powerDir = 1; }
   placePowerCursor();
@@ -424,24 +452,19 @@ function shoot() {
   state.phase = "fly";
   state.fly = { ...shot, start: performance.now() };
   el.aimArrow.classList.add("hidden");
+  el.powerWrap.classList.remove("is-active");
   el.phaseHint.textContent = "";
 
-  // 골키퍼 연출 — 판정(outcome)이 computeShot에서 확정된 "뒤"에 실행.
-  //  골인 → 반드시 공과 다른 방향으로 다이빙 (못 막은 것처럼):
-  //    공 왼쪽 → right/up 랜덤 · 공 오른쪽 → left/up 랜덤
-  //    공 중앙 → 공이 미세하게 쏠린 반대쪽(완전 중앙이면 left/right 랜덤)
-  //      — 중앙 존이라도 공이 살짝 오른쪽이면 오른쪽 다이빙은 같은 쪽으로 보여 제외
-  //  노골(옆 빗나감/파워 부족/과다) → 준비 자세(default) 유지
+  // 판정 흐름: 슈팅 확정 → 골키퍼 방향 랜덤 결정 → 세이브 여부 확정
+  //           → 공 궤적 + 골키퍼 다이빙 동시 연출 → 결과 표시
   const a = state.aimAngle / CONFIG.AIM_MAX_ANGLE; // -1 ~ 1
-  let pose = "default";
-  if (shot.outcome === "goal") {
-    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-    if (a < -CONFIG.KEEPER_ZONE_SPLIT) pose = pick(["right", "up"]);      // 공 왼쪽
-    else if (a > CONFIG.KEEPER_ZONE_SPLIT) pose = pick(["left", "up"]);   // 공 오른쪽
-    else if (Math.abs(a) < 0.05) pose = pick(["left", "right"]);          // 완전 중앙
-    else pose = a > 0 ? "left" : "right";                                 // 중앙 존이지만 쏠림 반대쪽
+  state.keeperDir = pickKeeperDir();
+  // 골로 들어갈 공(방향·파워 적정)인데 골키퍼가 같은 방향이면 세이브
+  if (shot.outcome === "goal" && state.keeperDir === ballZoneOf(a)) {
+    shot.outcome = "saved";
+    state.fly.outcome = "saved";
   }
-  setKeeperPose(pose);
+  setKeeperPose(state.keeperDir); // 노골 슈팅에도 항상 다이빙 (연출 일관성)
 
   // 발사 위치에서 비행용 공으로 교체
   el.shootBall.style.visibility = "hidden";
@@ -483,8 +506,13 @@ function resolveShot() {
     el.goalNetFx.classList.remove("is-shaking");
     void el.goalNetFx.offsetWidth;
     el.goalNetFx.classList.add("is-shaking");
+  } else if (f.outcome === "saved") {
+    // 골키퍼 세이브: 공이 골키퍼에게 잡힘
+    state.lastSaveDir = state.keeperDir; // 다음 슈팅에서 같은 방향 반복 확률 낮춤
+    el.flyBall.classList.add("hidden");
+    showFlash("막혔다!");
   } else {
-    // 노골: 플래시 없이 하단 힌트로만 안내
+    // 그 외 노골: 플래시 없이 하단 힌트로만 안내
     if (f.outcome !== "over") {
       setTimeout(() => el.flyBall.classList.add("hidden"), 250);
     } else {
@@ -494,6 +522,7 @@ function resolveShot() {
   renderHud();
 
   el.phaseHint.textContent = isGoal ? "" :
+    f.outcome === "saved" ? "골키퍼가 막았어요!" :
     f.outcome === "short" ? "파워가 부족했어요…" :
     f.outcome === "over" ? "너무 세게 찼어요!" : "옆으로 빗나갔어요!";
 
@@ -578,12 +607,14 @@ function loop(now) {
   state.lastTime = now;
 
   // 제한시간: 조준~파워 단계에서만 흐른다 (연출·이동·결과 중에는 정지)
-  if (state.phase === "aim" || state.phase === "aiming" || state.phase === "power") {
+  if (state.phase === "aim" || state.phase === "aiming") {
     updateShotTimer(now);
   }
 
+  // 파워 인디케이터: 게임 화면에 있는 동안 항상 왕복 (비행·판정 연출 중에만 정지)
+  if (["countdown", "aim", "aiming"].includes(state.phase)) updatePower(dt);
+
   if (state.phase === "aiming") applyAim(); // 프레임당 1회만 화살표 갱신
-  else if (state.phase === "power") updatePower(dt);
   else if (state.phase === "fly") updateFly(now);
 
   state.rafId = requestAnimationFrame(loop);
@@ -601,7 +632,7 @@ function stopLoop() {
 
 /* ── 입력 (pointer 이벤트 · 마우스/터치 공용) ──
    조준: 공을 잡고(pointerdown) 드래그(pointermove) → 떼면(pointerup) 방향 고정
-   파워: 화면 아무 데나 탭하면 슈팅 */
+   놓는 순간(pointerup) 그 시점의 파워로 즉시 슈팅 · 짧은 스침은 취소 */
 function onPointerDown(e) {
   e.preventDefault();
   if (state.phase === "aim") {
@@ -610,14 +641,13 @@ function onPointerDown(e) {
       state.phase = "aiming";
       state.aimPointerId = e.pointerId;
       state.aimPointer = { x: e.clientX, y: e.clientY };
+      state.aimStart = { x: e.clientX, y: e.clientY };
       el.aimArrow.classList.remove("hidden");
+      el.powerWrap.classList.add("is-active"); // 놓는 순간의 파워를 보며 조준
       applyAim(); // 첫 프레임은 즉시 반영
-      el.phaseHint.textContent = "놓으면 방향이 고정돼요!";
       // 손가락이 공 밖으로 나가도 추적 유지
       try { screens.game.setPointerCapture(e.pointerId); } catch (_) { /* 합성 이벤트 등 */ }
     }
-  } else if (state.phase === "power") {
-    shoot();
   }
 }
 
@@ -632,7 +662,13 @@ function onPointerUp(e) {
   if (state.phase !== "aiming" || e.pointerId !== state.aimPointerId) return;
   e.preventDefault();
   state.aimPointerId = null;
-  beginPower(); // 화살표는 고정된 방향 그대로 보여준다
+  // 실수 방지: 드래그가 아주 짧으면(살짝 스침) 슈팅하지 않고 취소
+  const drag = Math.hypot(e.clientX - state.aimStart.x, e.clientY - state.aimStart.y);
+  if (drag < CONFIG.MIN_DRAG_TO_SHOOT_PX) {
+    beginAim(false); // 타이머는 그대로 진행
+    return;
+  }
+  shoot(); // 놓는 순간의 파워 선 위치로 즉시 슈팅
 }
 
 function onPointerCancel(e) {
@@ -660,4 +696,4 @@ window.addEventListener("resize", () => {
 renderLanding();
 
 // 개발용 디버그 훅 (난이도·연출 값 조절 등)
-window.__roniDebug = { CONFIG, state };
+window.__roniDebug = { CONFIG, state, pickKeeperDir };
